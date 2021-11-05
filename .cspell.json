@@ -1,0 +1,31 @@
+{
+    "version": "0.2",
+    "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/master/cspell.schema.json",
+    "enabledLanguageIds": [
+        "markdown",
+        "typescript"
+    ],
+    "files": [
+        "**/*"
+    ],
+    "ignorePaths": [
+        "node_modules",
+        "coverage",
+        "doc/api/**",
+        "src/sandbox/**",
+        "package-lock.json",
+        "git",
+        "lib",
+        "dist",
+        "*.log",
+        "*.tgz"
+    ],
+    "words": [
+        "datastream",
+        "kayahr",
+        "ponyfill",
+        "Reimer",
+        "typedoc"
+    ],
+    "language": "en"
+}
