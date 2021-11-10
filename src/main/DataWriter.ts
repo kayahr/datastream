@@ -87,7 +87,6 @@ export class DataWriter {
             this.byte = 0;
             this.bit = 0;
             const chunk = new Uint8Array(this.buffer.subarray(0, byte + (bit > 0 ? 1 : 0)));
-            this.written += chunk.length;
             await this.sink.write(chunk);
         }
     }
@@ -103,6 +102,7 @@ export class DataWriter {
         if (this.bit >= 8) {
             this.bit = 0;
             this.byte++;
+            this.written++;
             if (this.byte >= this.bufferSize) {
                 await this.flush();
             }
@@ -119,6 +119,7 @@ export class DataWriter {
             // At byte boundary, whole byte can be written at once
             this.buffer[this.byte] = value;
             this.byte++;
+            this.written++;
             if (this.byte >= this.bufferSize) {
                 await this.flush();
             }
@@ -228,7 +229,7 @@ export class DataWriter {
      *
      * @param values - The values to write.
      */
-    public async writeUint8s(values: Uint8Array | number[]): Promise<void> {
+    public async writeUint8s(values: Uint8Array | Uint8ClampedArray | number[]): Promise<void> {
         const len = values.length;
         let lastPromise: Promise<void> | null = null;
         if (this.bit === 0) {
@@ -239,6 +240,7 @@ export class DataWriter {
                 this.buffer.set(chunk, this.byte);
                 start += chunk.length;
                 this.byte += chunk.length;
+                this.written += chunk.length;
                 if (this.byte >= this.bufferSize) {
                     lastPromise = this.flush();
                 }
@@ -269,6 +271,7 @@ export class DataWriter {
                 this.buffer.set(chunk, this.byte);
                 start += chunk.length;
                 this.byte += chunk.length;
+                this.written += chunk.length;
                 if (this.byte >= this.bufferSize) {
                     lastPromise = this.flush();
                 }
