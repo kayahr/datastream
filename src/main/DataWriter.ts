@@ -384,7 +384,7 @@ export class DataWriter {
      * @param values     - The values to write.
      * @param endianness - Optional endianness. Defaults to endianness the writer was configured with.
      */
-    public async writeBigUint64s(values: BigUint64Array | Array<bigint>, endianness: Endianness = this.endianness):
+    public async writeBigUint64s(values: BigUint64Array | bigint[], endianness: Endianness = this.endianness):
             Promise<void> {
         // TODO Check for native endianness
         if (endianness === Endianness.LITTLE) {
@@ -409,7 +409,7 @@ export class DataWriter {
      * @param values     - The values to write.
      * @param endianness - Optional endianness. Defaults to endianness the writer was configured with.
      */
-    public async writeBigInt64s(values: BigInt64Array | Array<bigint>, endianness: Endianness = this.endianness):
+    public async writeBigInt64s(values: BigInt64Array | bigint[], endianness: Endianness = this.endianness):
             Promise<void> {
         // TODO Check for native endianness
         if (endianness === Endianness.LITTLE) {
