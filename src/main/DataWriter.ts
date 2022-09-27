@@ -87,7 +87,10 @@ export class DataWriter {
             this.byte = 0;
             this.bit = 0;
             const chunk = new Uint8Array(this.buffer.subarray(0, byte + (bit > 0 ? 1 : 0)));
-            await this.sink.write(chunk);
+            const result = this.sink.write(chunk);
+            if (result != null) {
+                await result;
+            }
         }
     }
 
