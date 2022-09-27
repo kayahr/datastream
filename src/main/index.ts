@@ -6,3 +6,4 @@
 export * from "./DataWriter";
 export * from "./DataWriterSink";
 export * from "./Endianness";
+export * from "./Uint8ArraySink";
