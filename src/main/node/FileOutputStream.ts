@@ -3,13 +3,8 @@
  * See LICENSE.md for licensing information
  */
 
-import * as fs from "fs";
-import { promisify } from "util";
+import { FileHandle, open } from "fs/promises";
 import { WritableStream } from "web-streams-polyfill/ponyfill";
-
-const open = promisify(fs.open);
-const write = promisify(fs.write);
-const close = promisify(fs.close);
 
 /**
  * File output stream for Node.js.
@@ -21,18 +16,18 @@ export class FileOutputStream extends WritableStream<Uint8Array> {
      * @param file - The name of the file to write to.
      */
     public constructor(file: string) {
-        let fd = NaN;
+        let fd: FileHandle;
         super({
             async start() {
                 fd = await open(file, "w");
             },
 
             async write(chunk) {
-                await write(fd, chunk);
+                await fd.write(chunk);
             },
 
             async close() {
-                await close(fd);
+                await fd.close();
             }
         });
     }
