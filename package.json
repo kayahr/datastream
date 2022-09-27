@@ -38,14 +38,12 @@
     "scripts": {
         "clean": "rimraf lib coverage doc/api",
         "compile": "tsc",
-        "watch": "tsc -w",
-        "check": "jest",
-        "coverage": "jest --coverage",
-        "doc": "typedoc --excludeNotExported --excludePrivate --mode file --includes doc --out doc/api src/main ../../node_modules/**/*.d.ts",
+        "check": "better-jest",
+        "doc": "typedoc",
         "lint": "eslint --max-warnings 0 --ext .ts src",
         "cspell": "cspell --no-progress",
         "prepare": "npm run clean && npm run compile",
-        "test": "npm run cspell && npm run lint && npm run check"
+        "test": "npm run check && npm run lint && npm run doc -- --emit none && npm run cspell"
     },
     "jest": {
         "projects": [
@@ -69,6 +67,7 @@
         ]
     },
     "devDependencies": {
+        "@kayahr/better-jest": "1.0.4",
         "@kayahr/eslint-config": "2.5.0",
         "@kayahr/jest-electron-runner": "29.0.0",
         "@types/jest": "29.0.3",
