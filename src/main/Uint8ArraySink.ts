@@ -46,6 +46,13 @@ export class Uint8ArraySink implements DataWriterSink {
     }
 
     /**
+     * @returns the current capacity. When size reaches this capacity then the internal buffer must grow.
+     */
+    public getCapacity(): number {
+        return this.buffer.byteLength;
+    }
+
+    /**
      * @returns the written bytes.
      */
     public getData(): Uint8Array {
