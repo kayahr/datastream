@@ -23,9 +23,10 @@ export class Uint8ArraySink implements DataWriterSink {
     }
 
     /** @inheritDoc */
-    public write(chunk: Uint8Array): void {
+    public write(chunk: Uint8Array | number): void {
+        const isNumber = typeof chunk === "number";
         let capacity = this.buffer.byteLength;
-        const newSize = this.size + chunk.byteLength;
+        const newSize = this.size + (isNumber ? 1 : chunk.byteLength);
         if (newSize > capacity) {
             while (newSize > capacity) {
                 capacity += capacity;
@@ -34,7 +35,11 @@ export class Uint8ArraySink implements DataWriterSink {
             newBuffer.set(this.buffer, 0);
             this.buffer = newBuffer;
         }
-        this.buffer.set(chunk, this.size);
+        if (isNumber) {
+            this.buffer[this.size] = chunk;
+        } else {
+            this.buffer.set(chunk, this.size);
+        }
         this.size = newSize;
     }
 

@@ -11,9 +11,6 @@ import { Endianness } from "./Endianness";
 /** The default buffer size (64KB). */
 export const DEFAULT_BUFFER_SIZE = 65536;
 
-/** The default endianness (native). */
-export const DEFAULT_ENDIANNESS = Endianness.getNative();
-
 /**
  * Options for constructing a data writer.
  */
