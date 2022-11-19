@@ -1,8 +1,11 @@
+import { resolve } from "node:path";
+
 import { createTextEncoder } from "@kayahr/text-encoding";
 
-import { Endianness } from "../main";
 import { DataReader } from "../main/DataReader";
 import { DataReaderSource } from "../main/DataReaderSource";
+import { Endianness } from "../main/Endianness";
+import { FileInputStream } from "../main/node/FileInputStream";
 
 class MockDataReaderSource implements DataReaderSource {
     public readonly data: number[];
@@ -519,6 +522,58 @@ describe("DataReader", () => {
         });
     });
 
+    describe("readNullTerminatedString", () => {
+        const strings = "String 1\0\0a\0String 2\0String 3";
+
+        it("reads null-terminated strings at byte boundary", async () => {
+            const reader = new DataReader(new MockDataReaderSource(Array.from(new TextEncoder().encode(strings))));
+            expect(await reader.readNullTerminatedString()).toBe("String 1");
+            expect(await reader.readNullTerminatedString()).toBe("");
+            expect(await reader.readNullTerminatedString()).toBe("a");
+            expect(await reader.readNullTerminatedString()).toBe("String 2");
+            expect(await reader.readNullTerminatedString()).toBe("String 3");
+            expect(await reader.readNullTerminatedString()).toBeNull();
+        });
+        it("reads null-terminated strings outside of byte boundary", async () => {
+            const reader = new DataReader(new MockDataReaderSource(
+                Array.from(shift4Bits(new TextEncoder().encode(strings)))));
+            expect(await reader.readBit()).toBe(0);
+            expect(await reader.readBit()).toBe(0);
+            expect(await reader.readBit()).toBe(0);
+            expect(await reader.readBit()).toBe(0);
+            expect(await reader.readNullTerminatedString()).toBe("String 1");
+            expect(await reader.readNullTerminatedString()).toBe("");
+            expect(await reader.readNullTerminatedString()).toBe("a");
+            expect(await reader.readNullTerminatedString()).toBe("String 2");
+            expect(await reader.readNullTerminatedString()).toBe("String 3");
+            expect(await reader.readNullTerminatedString()).toBeNull();
+        });
+        it("can limit the number of read bytes on byte boundary", async () => {
+            const reader = new DataReader(new MockDataReaderSource(Array.from(new TextEncoder().encode(strings))));
+            expect(await reader.readNullTerminatedString({ maxBytes: 3 })).toBe("Str");
+            expect(await reader.readNullTerminatedString()).toBe("ing 1");
+        });
+        it("can limit the number of read bytes outside byte boundary", async () => {
+            const reader = new DataReader(new MockDataReaderSource(Array.from(shift4Bits(
+                new TextEncoder().encode(strings)))));
+            expect(await reader.readBit()).toBe(0);
+            expect(await reader.readBit()).toBe(0);
+            expect(await reader.readBit()).toBe(0);
+            expect(await reader.readBit()).toBe(0);
+            expect(await reader.readNullTerminatedString({ maxBytes: 3 })).toBe("Str");
+            expect(await reader.readNullTerminatedString()).toBe("ing 1");
+        });
+        it("can read Shift-JIS lines", async () => {
+            const text = "灯台もと暗し。\0蛙の子は蛙。\0塵も積もれば山となる。";
+            const reader = new DataReader(new MockDataReaderSource(Array.from(createTextEncoder("Shift-JIS")
+                .encode(text))));
+            expect(await reader.readNullTerminatedString({ encoding: "Shift-JIS" })).toBe("灯台もと暗し。");
+            expect(await reader.readNullTerminatedString({ encoding: "Shift-JIS" })).toBe("蛙の子は蛙。");
+            expect(await reader.readNullTerminatedString({ encoding: "Shift-JIS" })).toBe("塵も積もれば山となる。");
+            expect(await reader.readNullTerminatedString({ encoding: "Shift-JIS" })).toBeNull();
+        });
+    });
+
     describe("readLine", () => {
         const linesLF = "Line 1\nLine 2\n\nEmpty line";
         const linesCRLF = "Line 1\r\nLine 2\r\n\r\nEmpty line";
@@ -576,57 +631,30 @@ describe("DataReader", () => {
             expect(await reader.readLine()).toBe("Foo\0Bar");
             expect(await reader.readLine()).toBeNull();
         });
-    });
 
-    describe("readNullTerminatedString", () => {
-        const strings = "String 1\0\0a\0String 2\0String 3";
-
-        it("reads null-terminated strings at byte boundary", async () => {
-            const reader = new DataReader(new MockDataReaderSource(Array.from(new TextEncoder().encode(strings))));
-            expect(await reader.readNullTerminatedString()).toBe("String 1");
-            expect(await reader.readNullTerminatedString()).toBe("");
-            expect(await reader.readNullTerminatedString()).toBe("a");
-            expect(await reader.readNullTerminatedString()).toBe("String 2");
-            expect(await reader.readNullTerminatedString()).toBe("String 3");
-            expect(await reader.readNullTerminatedString()).toBeNull();
-        });
-        it("reads null-terminated strings outside of byte boundary", async () => {
-            const reader = new DataReader(new MockDataReaderSource(
-                Array.from(shift4Bits(new TextEncoder().encode(strings)))));
-            expect(await reader.readBit()).toBe(0);
-            expect(await reader.readBit()).toBe(0);
-            expect(await reader.readBit()).toBe(0);
-            expect(await reader.readBit()).toBe(0);
-            expect(await reader.readNullTerminatedString()).toBe("String 1");
-            expect(await reader.readNullTerminatedString()).toBe("");
-            expect(await reader.readNullTerminatedString()).toBe("a");
-            expect(await reader.readNullTerminatedString()).toBe("String 2");
-            expect(await reader.readNullTerminatedString()).toBe("String 3");
-            expect(await reader.readNullTerminatedString()).toBeNull();
-        });
-        it("can limit the number of read bytes on byte boundary", async () => {
-            const reader = new DataReader(new MockDataReaderSource(Array.from(new TextEncoder().encode(strings))));
-            expect(await reader.readNullTerminatedString({ maxBytes: 3 })).toBe("Str");
-            expect(await reader.readNullTerminatedString()).toBe("ing 1");
-        });
-        it("can limit the number of read bytes outside byte boundary", async () => {
-            const reader = new DataReader(new MockDataReaderSource(Array.from(shift4Bits(
-                new TextEncoder().encode(strings)))));
-            expect(await reader.readBit()).toBe(0);
-            expect(await reader.readBit()).toBe(0);
-            expect(await reader.readBit()).toBe(0);
-            expect(await reader.readBit()).toBe(0);
-            expect(await reader.readNullTerminatedString({ maxBytes: 3 })).toBe("Str");
-            expect(await reader.readNullTerminatedString()).toBe("ing 1");
-        });
-        it("can read Shift-JIS lines", async () => {
-            const text = "灯台もと暗し。\0蛙の子は蛙。\0塵も積もれば山となる。";
-            const reader = new DataReader(new MockDataReaderSource(Array.from(createTextEncoder("Shift-JIS")
-                .encode(text))));
-            expect(await reader.readNullTerminatedString({ encoding: "Shift-JIS" })).toBe("灯台もと暗し。");
-            expect(await reader.readNullTerminatedString({ encoding: "Shift-JIS" })).toBe("蛙の子は蛙。");
-            expect(await reader.readNullTerminatedString({ encoding: "Shift-JIS" })).toBe("塵も積もれば山となる。");
-            expect(await reader.readNullTerminatedString({ encoding: "Shift-JIS" })).toBeNull();
-        });
+        if ((typeof process !== "undefined") && (process.release?.name === "node")) {
+            for (const encoding of [ "utf-8" /* , "utf-16le", "utf-16be" */ ]) {
+                it(`can read Iliad in ${encoding}`, async () => {
+                    const stream = new FileInputStream(resolve(__dirname, `../../src/test/data/iliad_${encoding}.txt`));
+                    try {
+                        const reader = new DataReader(stream.getReader());
+                        let line: string | null;
+                        let lines = 0;
+                        let chars = 0;
+                        let longest = 0;
+                        while ((line = await reader.readLine({ encoding })) != null) {
+                            lines++;
+                            chars += line.length;
+                            longest = Math.max(longest, line.length);
+                        }
+                        expect(lines).toBe(14408);
+                        expect(chars).toBe(686996);
+                        expect(longest).toBe(76);
+                    } finally {
+                        await stream.close();
+                    }
+                });
+            }
+        }
     });
 });
