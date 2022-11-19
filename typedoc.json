@@ -1,11 +1,11 @@
 {
     "$schema": "https://typedoc.org/schema.json",
     "entryPoints": [
-        "src/main",
-        "src/typings"
+        "src/main/index.ts",
+        "src/main/node/index.ts"
     ],
     "basePath": "src/main",
-    "entryPointStrategy": "expand",
+    "entryPointStrategy": "resolve",
     "out": "doc/api",
     "excludePrivate": true,
     "excludeExternals": true,
