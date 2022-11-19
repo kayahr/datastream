@@ -1,8 +1,8 @@
 {
     "$schema": "http://json.schemastore.org/tsconfig",
     "compilerOptions": {
-        "target": "es2020",
-        "lib": [ "es2020", "dom" ],
+        "target": "es2021",
+        "lib": [ "es2021", "dom" ],
         "moduleResolution": "node",
         "module": "commonjs",
         "rootDir": "src",

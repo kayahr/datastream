@@ -1,14 +1,17 @@
 import { createTextEncoder } from "@kayahr/text-encoding";
 
 import { Endianness } from "../main";
-import { DataReader, EOL } from "../main/DataReader";
+import { DataReader } from "../main/DataReader";
 import { DataReaderSource } from "../main/DataReaderSource";
 
 class MockDataReaderSource implements DataReaderSource {
+    public readonly data: number[];
     public constructor(
-        public readonly data: number[] = [ 1, 2, 3, 4, 5, 6, 7, 8 ],
+        data: number[] = [ 1, 2, 3, 4, 5, 6, 7, 8 ],
         public readonly chunkSize = 3
-    ) {}
+    ) {
+        this.data = data.slice();
+    }
 
     public read(): ReadableStreamReadResult<Uint8Array> {
         const chunk = this.data.splice(0, this.chunkSize);
@@ -18,6 +21,33 @@ class MockDataReaderSource implements DataReaderSource {
             return { done: false, value: new Uint8Array(chunk) };
         }
     }
+}
+
+function createTestData(): number[] {
+    const data: number[] = [];
+    for (let i = 0x00; i <= 0xff; i += 0x11) {
+        data.push(i);
+    }
+    for (let i = 0xff; i >= 0x00; i -= 0x11) {
+        data.push(i);
+    }
+    for (let i = 0x0f; i <= 0xf0; i += 0x0f) {
+        data.push(i);
+    }
+    for (let i = 0xf0; i >= 0x0f; i -= 0x0f) {
+        data.push(i);
+    }
+    return data;
+}
+
+function shift4Bits(values: Uint8Array): Uint8Array {
+    const shifted = new Uint8Array(values.length + 1);
+    for (let i = 0; i < values.length; i++) {
+        const value = values[i];
+        shifted[i] |= (value & 0x0f) << 4;
+        shifted[i + 1] |= value >> 4;
+    }
+    return shifted;
 }
 
 describe("DataReader", () => {
@@ -78,7 +108,7 @@ describe("DataReader", () => {
                 expect(await reader.readBit()).toBe(0);
             }
             // EOF
-            expect(await reader.readUint8()).toBeNull();
+            expect(await reader.readBit()).toBeNull();
         });
     });
 
@@ -103,8 +133,7 @@ describe("DataReader", () => {
             expect(await reader.readBit()).toBe(0);
             expect(await reader.readBit()).toBe(1);
             expect(await reader.readUint8()).toBe(0b01000110);
-            expect(await reader.readBit()).toBe(1);
-            expect(await reader.readBit()).toBeNull();
+            expect(await reader.readUint8()).toBeNull();
         });
         it("returns null if less than 8 bits are available", async () => {
             const reader = new DataReader(new MockDataReaderSource([ 255 ]));
@@ -124,47 +153,6 @@ describe("DataReader", () => {
             expect(await reader.readInt8()).toBe(-1);
             expect(await reader.readInt8()).toBe(-128);
             expect(await reader.readInt8()).toBeNull();
-        });
-    });
-
-    describe("readUint8s", () => {
-        it("reads a block of 8 bit unsigned integers at byte boundary", async () => {
-            const reader = new DataReader(new MockDataReaderSource([ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ], 2));
-            const buffer = new Uint8Array(12);
-            expect(await reader.readUint8Array(buffer, 1, 3)).toBe(3);
-            expect(Array.from(buffer)).toEqual([ 0, 1, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0 ]);
-            expect(await reader.readUint8Array(buffer, 4, 4)).toBe(4);
-            expect(Array.from(buffer)).toEqual([ 0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0 ]);
-            expect(await reader.readUint8Array(buffer, 8, 2)).toBe(2);
-            expect(Array.from(buffer)).toEqual([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0 ]);
-            expect(await reader.readUint8Array(buffer, 10, 6)).toBe(1);
-            expect(Array.from(buffer)).toEqual([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0 ]);
-            expect(await reader.readUint8()).toBeNull();
-        });
-        it("reads a block of 8 bit unsigned integers outside of byte boundary", async () => {
-            const reader = new DataReader(new MockDataReaderSource([ 0x01, 0x23, 0x45, 0x67, 0x89 ], 2));
-            const buffer = new Uint8Array(4);
-            expect(await reader.readBit()).toBe(1);
-            expect(await reader.readBit()).toBe(0);
-            expect(await reader.readBit()).toBe(0);
-            expect(await reader.readBit()).toBe(0);
-            expect(await reader.readUint8Array(buffer)).toBe(4);
-            expect(Array.from(buffer)).toEqual([ 0x30, 0x52, 0x74, 0x96 ]);
-            expect(await reader.readBit()).toBe(0);
-            expect(await reader.readBit()).toBe(0);
-            expect(await reader.readBit()).toBe(0);
-            expect(await reader.readBit()).toBe(1);
-            expect(await reader.readBit()).toBeNull();
-        });
-    });
-
-    describe("readInt8s", () => {
-        it("reads a block of 8 bit signed integers at byte boundary", async () => {
-            const reader = new DataReader(new MockDataReaderSource([ 1, -1, 127, -128, 255, 128 ], 2));
-            const buffer = new Int8Array(9);
-            expect(await reader.readInt8Array(buffer, 1, 3)).toBe(3);
-            expect(await reader.readInt8Array(buffer, 5)).toBe(3);
-            expect(Array.from(buffer)).toEqual([ 0, 1, -1, 127, 0, -128, -1, -128, 0 ]);
         });
     });
 
@@ -267,62 +255,249 @@ describe("DataReader", () => {
         });
     });
 
-    describe("readUint16s", () => {
-        it("reads a block of 16 bit unsigned integers", async () => {
-            const reader = new DataReader(new MockDataReaderSource([ 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
-                0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10 ], 2));
-            const buffer = new Uint16Array(10).fill(0x1234);
-            expect(await reader.readUint16Array(buffer, 1, 2)).toBe(2);
-            expect(Array.from(buffer)).toEqual([ 0x1234, 0x2301, 0x6745, 0x1234, 0x1234, 0x1234, 0x1234, 0x1234,
-                0x1234, 0x1234 ]);
-            expect(await reader.readUint16Array(buffer, 3, 2, Endianness.BIG)).toBe(2);
-            expect(Array.from(buffer)).toEqual([ 0x1234, 0x2301, 0x6745, 0x89ab, 0xcdef, 0x1234, 0x1234, 0x1234,
-                0x1234, 0x1234 ]);
-            expect(await reader.readUint16Array(buffer, 5, 2, Endianness.BIG)).toBe(2);
-            expect(Array.from(buffer)).toEqual([ 0x1234, 0x2301, 0x6745, 0x89ab, 0xcdef, 0xfedc, 0xba98, 0x1234,
-                0x1234, 0x1234 ]);
-            expect(await reader.readUint16Array(buffer, 7, 3)).toBe(2);
-            expect(Array.from(buffer)).toEqual([ 0x1234, 0x2301, 0x6745, 0x89ab, 0xcdef, 0xfedc, 0xba98, 0x5476,
-                0x1032, 0x1234 ]);
+    describe("readUint8Array", () => {
+        it("reads a block of 8 bit unsigned integers at byte boundary", async () => {
+            const reader = new DataReader(new MockDataReaderSource([ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ], 2));
+            const buffer = new Uint8Array(12);
+            expect(await reader.readUint8Array(buffer, 1, 3)).toBe(3);
+            expect(Array.from(buffer)).toEqual([ 0, 1, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0 ]);
+            expect(await reader.readUint8Array(buffer, 4, 4)).toBe(4);
+            expect(Array.from(buffer)).toEqual([ 0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0 ]);
+            expect(await reader.readUint8Array(buffer, 8, 2)).toBe(2);
+            expect(Array.from(buffer)).toEqual([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0 ]);
+            expect(await reader.readUint8Array(buffer, 10, 6)).toBe(1);
+            expect(Array.from(buffer)).toEqual([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0 ]);
+            expect(await reader.readUint8Array(buffer, 0, 1)).toBe(0);
+        });
+        it("reads a block of 8 bit unsigned integers outside of byte boundary", async () => {
+            const reader = new DataReader(new MockDataReaderSource([ 0x01, 0x23, 0x45, 0x67, 0x89 ], 2));
+            const buffer = new Uint8Array(4);
+            expect(await reader.readBit()).toBe(1);
+            expect(await reader.readBit()).toBe(0);
+            expect(await reader.readBit()).toBe(0);
+            expect(await reader.readBit()).toBe(0);
+            expect(await reader.readUint8Array(buffer)).toBe(4);
+            expect(Array.from(buffer)).toEqual([ 0x30, 0x52, 0x74, 0x96 ]);
+            expect(await reader.readBit()).toBe(0);
+            expect(await reader.readBit()).toBe(0);
+            expect(await reader.readBit()).toBe(0);
+            expect(await reader.readUint8Array(buffer)).toBe(0);
         });
     });
 
-    describe("readInt16s", () => {
-        it("reads a block of 16 bit signed integers", async () => {
-            const data = new Int16Array([ 0, 1, -1, 32767, -32768, 0x1234 ]);
-            const otherEndianness = Endianness.getNative() === Endianness.BIG ? Endianness.LITTLE : Endianness.BIG;
-            const reader = new DataReader(new MockDataReaderSource(Array.from(new Uint8Array(data.buffer))));
-            const buffer = new Int16Array(8);
-            expect(await reader.readInt16Array(buffer, 1, 5)).toBe(5);
-            expect(Array.from(buffer)).toEqual([ 0, 0, 1, -1, 32767, -32768, 0, 0 ]);
-            expect(await reader.readInt16Array(buffer, 6, 2, otherEndianness)).toBe(1);
-            expect(Array.from(buffer)).toEqual([ 0, 0, 1, -1, 32767, -32768, 0x3412, 0 ]);
+    describe("readInt8Array", () => {
+        it("reads a block of 8 bit signed integers at byte boundary", async () => {
+            const reader = new DataReader(new MockDataReaderSource([ 1, -1, 127, -128, 255, 128 ], 2));
+            const buffer = new Int8Array(9);
+            expect(await reader.readInt8Array(buffer, 1, 3)).toBe(3);
+            expect(await reader.readInt8Array(buffer, 5)).toBe(3);
+            expect(Array.from(buffer)).toEqual([ 0, 1, -1, 127, 0, -128, -1, -128, 0 ]);
+            expect(await reader.readInt8Array(buffer)).toBe(0);
         });
     });
 
-    describe("readUint32s", () => {
-        it("reads a block of 32 bit unsigned integers", async () => {
-            const reader = new DataReader(new MockDataReaderSource([ 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
-                0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10 ], 2));
-            const buffer = new Uint32Array(6);
-            expect(await reader.readUint32Array(buffer, 1, 2)).toBe(2);
-            expect(Array.from(buffer)).toEqual([ 0, 0x67452301, 0xefcdab89, 0, 0, 0 ]);
-            expect(await reader.readUint32Array(buffer, 3, 3, Endianness.BIG)).toBe(2);
-            expect(Array.from(buffer)).toEqual([ 0, 0x67452301, 0xefcdab89, 0xfedcba98, 0x76543210, 0 ]);
-        });
+    describe("readUint16Array", () => {
+        const numBytes = 2;
+        const data = createTestData();
+        const numValues = data.length / numBytes;
+        const view = new DataView(new Uint8Array(data).buffer);
+        for (const endianness of [ Endianness.LITTLE, Endianness.BIG ]) {
+            const endian = endianness === Endianness.LITTLE ? "little" : "big";
+            it(`reads 16 bit unsigned integers with ${endian} endian`, async () => {
+                const reader = new DataReader(new MockDataReaderSource(data, numBytes - 1));
+                const buffer = new Uint16Array(numValues);
+                expect(await reader.readUint16Array(buffer, { endianness })).toBe(numValues);
+                for (let i = 0; i < numValues; i++) {
+                    const value = view.getUint16(i * numBytes, endianness === Endianness.LITTLE);
+                    expect(buffer[i]).toBe(value);
+                }
+                expect(await reader.readUint16Array(buffer)).toBe(0);
+            });
+            for (const size of [ 1, 2, 4, 8 ]) {
+                it(`reads 16 bit unsigned integers with ${endian} endian and block size ${size}`, async () => {
+                    const reader = new DataReader(new MockDataReaderSource(data, numBytes + (size >> 1)));
+                    const buffer = new Uint16Array(numValues);
+                    for (let offset = 0; offset < numValues; offset += size) {
+                        expect(await reader.readUint16Array(buffer, { offset, size, endianness })).toBe(size);
+                    }
+                    for (let i = 0; i < numValues; i++) {
+                        const value = view.getUint16(i * numBytes, endianness === Endianness.LITTLE);
+                        expect(buffer[i]).toBe(value);
+                    }
+                    expect(await reader.readUint16Array(buffer, { offset: 0, size: numValues })).toBe(0);
+                });
+            }
+        }
     });
 
-    describe("readInt32s", () => {
-        it("reads a block of 32 bit signed integers", async () => {
-            const data = new Int32Array([ 0, 1, -1, 2147483647, -2147483648, 0x12345678 ]);
-            const otherEndianness = Endianness.getNative() === Endianness.BIG ? Endianness.LITTLE : Endianness.BIG;
-            const reader = new DataReader(new MockDataReaderSource(Array.from(new Uint8Array(data.buffer))));
-            const buffer = new Int32Array(8);
-            expect(await reader.readInt32Array(buffer, 1, 5)).toBe(5);
-            expect(Array.from(buffer)).toEqual([ 0, 0, 1, -1, 2147483647, -2147483648, 0, 0 ]);
-            expect(await reader.readInt32Array(buffer, 6, 2, otherEndianness)).toBe(1);
-            expect(Array.from(buffer)).toEqual([ 0, 0, 1, -1, 2147483647, -2147483648, 0x78563412, 0 ]);
-        });
+    describe("readInt16Array", () => {
+        const numBytes = 2;
+        const data = createTestData();
+        const numValues = data.length / numBytes;
+        const view = new DataView(new Uint8Array(data).buffer);
+        for (const endianness of [ Endianness.LITTLE, Endianness.BIG ]) {
+            const endian = endianness === Endianness.LITTLE ? "little" : "big";
+            it(`reads 16 bit signed integers with ${endian} endian`, async () => {
+                const reader = new DataReader(new MockDataReaderSource(data, numBytes - 1));
+                const buffer = new Int16Array(numValues);
+                expect(await reader.readInt16Array(buffer, { endianness })).toBe(numValues);
+                for (let i = 0; i < numValues; i++) {
+                    const value = view.getInt16(i * numBytes, endianness === Endianness.LITTLE);
+                    expect(buffer[i]).toBe(value);
+                }
+                expect(await reader.readInt16Array(buffer)).toBe(0);
+            });
+            for (const size of [ 1, 2, 4, 8 ]) {
+                it(`reads 16 bit signed integers with ${endian} endian and block size ${size}`, async () => {
+                    const reader = new DataReader(new MockDataReaderSource(data, numBytes + (size >> 1)));
+                    const buffer = new Int16Array(numValues);
+                    for (let offset = 0; offset < numValues; offset += size) {
+                        expect(await reader.readInt16Array(buffer, { offset, size, endianness })).toBe(size);
+                    }
+                    for (let i = 0; i < numValues; i++) {
+                        const value = view.getInt16(i * numBytes, endianness === Endianness.LITTLE);
+                        expect(buffer[i]).toBe(value);
+                    }
+                    expect(await reader.readInt16Array(buffer, { offset: 0, size: numValues })).toBe(0);
+                });
+            }
+        }
+    });
+
+    describe("readUint32Array", () => {
+        const numBytes = 4;
+        const data = createTestData();
+        const numValues = data.length / numBytes;
+        const view = new DataView(new Uint8Array(data).buffer);
+        for (const endianness of [ Endianness.LITTLE, Endianness.BIG ]) {
+            const endian = endianness === Endianness.LITTLE ? "little" : "big";
+            it(`reads 32 bit unsigned integers with ${endian} endian`, async () => {
+                const reader = new DataReader(new MockDataReaderSource(data, numBytes - 1));
+                const buffer = new Uint32Array(numValues);
+                expect(await reader.readUint32Array(buffer, { endianness })).toBe(numValues);
+                for (let i = 0; i < numValues; i++) {
+                    const value = view.getUint32(i * numBytes, endianness === Endianness.LITTLE);
+                    expect(buffer[i]).toBe(value);
+                }
+                expect(await reader.readUint32Array(buffer)).toBe(0);
+            });
+            for (const size of [ 1, 2, 4, 8 ]) {
+                it(`reads 32 bit unsigned integers with ${endian} endian and block size ${size}`, async () => {
+                    const reader = new DataReader(new MockDataReaderSource(data, numBytes + (size >> 1)));
+                    const buffer = new Uint32Array(numValues);
+                    for (let offset = 0; offset < numValues; offset += size) {
+                        expect(await reader.readUint32Array(buffer, { offset, size, endianness })).toBe(size);
+                    }
+                    for (let i = 0; i < numValues; i++) {
+                        const value = view.getUint32(i * numBytes, endianness === Endianness.LITTLE);
+                        expect(buffer[i]).toBe(value);
+                    }
+                    expect(await reader.readUint32Array(buffer, { offset: 0, size: numValues })).toBe(0);
+                });
+            }
+        }
+    });
+
+    describe("readInt32Array", () => {
+        const numBytes = 4;
+        const data = createTestData();
+        const numValues = data.length / numBytes;
+        const view = new DataView(new Uint8Array(data).buffer);
+        for (const endianness of [ Endianness.LITTLE, Endianness.BIG ]) {
+            const endian = endianness === Endianness.LITTLE ? "little" : "big";
+            it(`reads 32 bit signed integers with ${endian} endian`, async () => {
+                const reader = new DataReader(new MockDataReaderSource(data, numBytes - 1));
+                const buffer = new Int32Array(numValues);
+                expect(await reader.readInt32Array(buffer, { endianness })).toBe(numValues);
+                for (let i = 0; i < numValues; i++) {
+                    const value = view.getInt32(i * numBytes, endianness === Endianness.LITTLE);
+                    expect(buffer[i]).toBe(value);
+                }
+                expect(await reader.readInt32Array(buffer)).toBe(0);
+            });
+            for (const size of [ 1, 2, 4, 8 ]) {
+                it(`reads 32 bit signed integers with ${endian} endian and block size ${size}`, async () => {
+                    const reader = new DataReader(new MockDataReaderSource(data, numBytes + (size >> 1)));
+                    const buffer = new Int32Array(numValues);
+                    for (let offset = 0; offset < numValues; offset += size) {
+                        expect(await reader.readInt32Array(buffer, { offset, size, endianness })).toBe(size);
+                    }
+                    for (let i = 0; i < numValues; i++) {
+                        const value = view.getInt32(i * numBytes, endianness === Endianness.LITTLE);
+                        expect(buffer[i]).toBe(value);
+                    }
+                    expect(await reader.readInt32Array(buffer, { offset: 0, size: numValues })).toBe(0);
+                });
+            }
+        }
+    });
+
+    describe("readBigUint64Array", () => {
+        const numBytes = 8;
+        const data = createTestData();
+        const numValues = data.length / numBytes;
+        const view = new DataView(new Uint8Array(data).buffer);
+        for (const endianness of [ Endianness.LITTLE, Endianness.BIG ]) {
+            const endian = endianness === Endianness.LITTLE ? "little" : "big";
+            it(`reads 64 bit unsigned integers with ${endian} endian`, async () => {
+                const reader = new DataReader(new MockDataReaderSource(data, numBytes - 1));
+                const buffer = new BigUint64Array(numValues);
+                expect(await reader.readBigUint64Array(buffer, { endianness })).toBe(numValues);
+                for (let i = 0; i < numValues; i++) {
+                    const value = view.getBigUint64(i * numBytes, endianness === Endianness.LITTLE);
+                    expect(buffer[i]).toBe(value);
+                }
+                expect(await reader.readBigUint64Array(buffer)).toBe(0);
+            });
+            for (const size of [ 1, 2, 4, 8 ]) {
+                it(`reads 64 bit unsigned integers with ${endian} endian and block size ${size}`, async () => {
+                    const reader = new DataReader(new MockDataReaderSource(data, numBytes + (size >> 1)));
+                    const buffer = new BigUint64Array(numValues);
+                    for (let offset = 0; offset < numValues; offset += size) {
+                        expect(await reader.readBigUint64Array(buffer, { offset, size, endianness })).toBe(size);
+                    }
+                    for (let i = 0; i < numValues; i++) {
+                        const value = view.getBigUint64(i * numBytes, endianness === Endianness.LITTLE);
+                        expect(buffer[i]).toBe(value);
+                    }
+                    expect(await reader.readBigUint64Array(buffer, { offset: 0, size: numValues })).toBe(0);
+                });
+            }
+        }
+    });
+
+    describe("readBigInt64Array", () => {
+        const numBytes = 8;
+        const data = createTestData();
+        const numValues = data.length / numBytes;
+        const view = new DataView(new Uint8Array(data).buffer);
+        for (const endianness of [ Endianness.LITTLE, Endianness.BIG ]) {
+            const endian = endianness === Endianness.LITTLE ? "little" : "big";
+            it(`reads 64 bit signed integers with ${endian} endian`, async () => {
+                const reader = new DataReader(new MockDataReaderSource(data, numBytes - 1));
+                const buffer = new BigInt64Array(numValues);
+                expect(await reader.readBigInt64Array(buffer, { endianness })).toBe(numValues);
+                for (let i = 0; i < numValues; i++) {
+                    const value = view.getBigInt64(i * numBytes, endianness === Endianness.LITTLE);
+                    expect(buffer[i]).toBe(value);
+                }
+                expect(await reader.readBigInt64Array(buffer)).toBe(0);
+            });
+            for (const size of [ 1, 2, 4, 8 ]) {
+                it(`reads 64 bit signed integers with ${endian} endian and block size ${size}`, async () => {
+                    const reader = new DataReader(new MockDataReaderSource(data, numBytes + (size >> 1)));
+                    const buffer = new BigInt64Array(numValues);
+                    for (let offset = 0; offset < numValues; offset += size) {
+                        expect(await reader.readBigInt64Array(buffer, { offset, size, endianness })).toBe(size);
+                    }
+                    for (let i = 0; i < numValues; i++) {
+                        const value = view.getBigInt64(i * numBytes, endianness === Endianness.LITTLE);
+                        expect(buffer[i]).toBe(value);
+                    }
+                    expect(await reader.readBigInt64Array(buffer, { offset: 0, size: numValues })).toBe(0);
+                });
+            }
+        }
     });
 
     describe("readString", () => {
@@ -347,58 +522,39 @@ describe("DataReader", () => {
     describe("readLine", () => {
         const linesLF = "Line 1\nLine 2\n\nEmpty line";
         const linesCRLF = "Line 1\r\nLine 2\r\n\r\nEmpty line";
-        const linesCR = "Line 1\rLine 2\r\rEmpty line";
 
         it("read LF terminated lines", async () => {
             const reader = new DataReader(new MockDataReaderSource(Array.from(new TextEncoder().encode(linesLF))));
             expect(await reader.readLine()).toBe("Line 1");
-            expect(await reader.readLine({ eol: EOL.LF })).toBe("Line 2");
-            expect(await reader.readLine({ eol: EOL.CR_OR_LF })).toBe("");
+            expect(await reader.readLine()).toBe("Line 2");
+            expect(await reader.readLine()).toBe("");
             expect(await reader.readLine()).toBe("Empty line");
             expect(await reader.readLine()).toBeNull();
         });
         it("read CRLF terminated lines", async () => {
             const reader = new DataReader(new MockDataReaderSource(Array.from(new TextEncoder().encode(linesCRLF))));
             expect(await reader.readLine()).toBe("Line 1");
-            expect(await reader.readLine({ eol: EOL.CRLF })).toBe("Line 2");
+            expect(await reader.readLine()).toBe("Line 2");
             expect(await reader.readLine()).toBe("");
             expect(await reader.readLine()).toBe("Empty line");
             expect(await reader.readLine()).toBeNull();
         });
-        it("read CR terminated lines", async () => {
-            const reader = new DataReader(new MockDataReaderSource(Array.from(new TextEncoder().encode(linesCR))));
-            expect(await reader.readLine({ eol: EOL.CR })).toBe("Line 1");
-            expect(await reader.readLine({ eol: EOL.CR_OR_LF })).toBe("Line 2");
-            expect(await reader.readLine({ eol: EOL.CR })).toBe("");
-            expect(await reader.readLine({ eol: EOL.CR })).toBe("Empty line");
-            expect(await reader.readLine({ eol: EOL.CR })).toBeNull();
+        it("can keep EOL markers in CR terminated lines", async () => {
+            const reader = new DataReader(new MockDataReaderSource(Array.from(new TextEncoder().encode(linesLF))));
+            expect(await reader.readLine({ includeEOL: true })).toBe("Line 1\n");
+            expect(await reader.readLine({ includeEOL: true })).toBe("Line 2\n");
+            expect(await reader.readLine({ includeEOL: true })).toBe("\n");
+            expect(await reader.readLine({ includeEOL: true })).toBe("Empty line");
+            expect(await reader.readLine({ includeEOL: true })).toBeNull();
         });
-        it("does not stop on wrong EOL markers", async () => {
-            const readerCR = new DataReader(new MockDataReaderSource(Array.from(new TextEncoder().encode(linesCR))));
-            const readerLF = new DataReader(new MockDataReaderSource(Array.from(new TextEncoder().encode(linesLF))));
-            const readerCRLF = new DataReader(new MockDataReaderSource(Array.from(
+        it("can keep EOL markers in CRLF terminated lines", async () => {
+            const reader = new DataReader(new MockDataReaderSource(Array.from(
                 new TextEncoder().encode(linesCRLF))));
-            expect(await readerCR.readLine({ eol: EOL.LF })).toBe("Line 1\rLine 2\r\rEmpty line");
-            expect(await readerLF.readLine({ eol: EOL.CRLF })).toBe("Line 1\nLine 2\n\nEmpty line");
-            expect(await readerCRLF.readLine({ eol: EOL.LF })).toBe("Line 1\r");
-            expect(await readerCRLF.readLine({ eol: EOL.LF })).toBe("Line 2\r");
-            expect(await readerCRLF.readLine({ eol: EOL.LF })).toBe("\r");
-            expect(await readerCRLF.readLine({ eol: EOL.LF })).toBe("Empty line");
-        });
-        it("can keep EOL markers", async () => {
-            const readerLF = new DataReader(new MockDataReaderSource(Array.from(new TextEncoder().encode(linesLF))));
-            const readerCRLF = new DataReader(new MockDataReaderSource(Array.from(
-                new TextEncoder().encode(linesCRLF))));
-            expect(await readerLF.readLine({ includeEOL: true })).toBe("Line 1\n");
-            expect(await readerLF.readLine({ includeEOL: true })).toBe("Line 2\n");
-            expect(await readerLF.readLine({ includeEOL: true })).toBe("\n");
-            expect(await readerLF.readLine({ includeEOL: true })).toBe("Empty line");
-            expect(await readerLF.readLine({ includeEOL: true })).toBeNull();
-            expect(await readerCRLF.readLine({ includeEOL: true })).toBe("Line 1\r\n");
-            expect(await readerCRLF.readLine({ includeEOL: true })).toBe("Line 2\r\n");
-            expect(await readerCRLF.readLine({ includeEOL: true })).toBe("\r\n");
-            expect(await readerCRLF.readLine({ includeEOL: true })).toBe("Empty line");
-            expect(await readerCRLF.readLine({ includeEOL: true })).toBeNull();
+            expect(await reader.readLine({ includeEOL: true })).toBe("Line 1\r\n");
+            expect(await reader.readLine({ includeEOL: true })).toBe("Line 2\r\n");
+            expect(await reader.readLine({ includeEOL: true })).toBe("\r\n");
+            expect(await reader.readLine({ includeEOL: true })).toBe("Empty line");
+            expect(await reader.readLine({ includeEOL: true })).toBeNull();
         });
         it("can limit the number of read bytes", async () => {
             const reader = new DataReader(new MockDataReaderSource(Array.from(new TextEncoder().encode(linesLF))));
@@ -420,26 +576,46 @@ describe("DataReader", () => {
             expect(await reader.readLine()).toBe("Foo\0Bar");
             expect(await reader.readLine()).toBeNull();
         });
-        it("does stop at null character if specified", async () => {
-            const reader = new DataReader(new MockDataReaderSource(Array.from(new TextEncoder().encode("Foo\0Bar"))));
-            expect(await reader.readLine({ nullTerminated: true })).toBe("Foo");
-            expect(await reader.readLine({ nullTerminated: true })).toBe("Bar");
-            expect(await reader.readLine({ nullTerminated: true })).toBeNull();
-        });
     });
 
     describe("readNullTerminatedString", () => {
-        const strings = "String 1\0String 2\0String 3";
+        const strings = "String 1\0\0a\0String 2\0String 3";
 
-        it("reads null-terminated strings", async () => {
+        it("reads null-terminated strings at byte boundary", async () => {
             const reader = new DataReader(new MockDataReaderSource(Array.from(new TextEncoder().encode(strings))));
             expect(await reader.readNullTerminatedString()).toBe("String 1");
+            expect(await reader.readNullTerminatedString()).toBe("");
+            expect(await reader.readNullTerminatedString()).toBe("a");
             expect(await reader.readNullTerminatedString()).toBe("String 2");
             expect(await reader.readNullTerminatedString()).toBe("String 3");
             expect(await reader.readNullTerminatedString()).toBeNull();
         });
-        it("can limit the number of read bytes", async () => {
+        it("reads null-terminated strings outside of byte boundary", async () => {
+            const reader = new DataReader(new MockDataReaderSource(
+                Array.from(shift4Bits(new TextEncoder().encode(strings)))));
+            expect(await reader.readBit()).toBe(0);
+            expect(await reader.readBit()).toBe(0);
+            expect(await reader.readBit()).toBe(0);
+            expect(await reader.readBit()).toBe(0);
+            expect(await reader.readNullTerminatedString()).toBe("String 1");
+            expect(await reader.readNullTerminatedString()).toBe("");
+            expect(await reader.readNullTerminatedString()).toBe("a");
+            expect(await reader.readNullTerminatedString()).toBe("String 2");
+            expect(await reader.readNullTerminatedString()).toBe("String 3");
+            expect(await reader.readNullTerminatedString()).toBeNull();
+        });
+        it("can limit the number of read bytes on byte boundary", async () => {
             const reader = new DataReader(new MockDataReaderSource(Array.from(new TextEncoder().encode(strings))));
+            expect(await reader.readNullTerminatedString({ maxBytes: 3 })).toBe("Str");
+            expect(await reader.readNullTerminatedString()).toBe("ing 1");
+        });
+        it("can limit the number of read bytes outside byte boundary", async () => {
+            const reader = new DataReader(new MockDataReaderSource(Array.from(shift4Bits(
+                new TextEncoder().encode(strings)))));
+            expect(await reader.readBit()).toBe(0);
+            expect(await reader.readBit()).toBe(0);
+            expect(await reader.readBit()).toBe(0);
+            expect(await reader.readBit()).toBe(0);
             expect(await reader.readNullTerminatedString({ maxBytes: 3 })).toBe("Str");
             expect(await reader.readNullTerminatedString()).toBe("ing 1");
         });

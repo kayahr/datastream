@@ -15,64 +15,44 @@ export interface DataReaderOptions {
     endianness?: Endianness;
 }
 
-export enum EOL {
-    /** Line feed character (Unix) */
-    LF,
-
-    /** Carriage return character (Old Mac OS) */
-    CR,
-
-    /** Carriage return and line feed character (Windows) */
-    CRLF,
-
-    /** Carriage return or line feed (Old Mac OS or Unix) */
-    CR_OR_LF,
-
-    /** Carriage return and line feed or only line feed (Windows or Unix) */
-    CRLF_OR_LF
-}
-
-export namespace EOL {
-    export function isEOL(eol: EOL, byte: number, previousByte?: number): number {
-        switch (eol) {
-            case EOL.LF:
-                return byte === 0x0a ? 1 : 0;
-            case EOL.CR:
-                return byte === 0x0d ? 1 : 0;
-            case EOL.CRLF:
-                return previousByte === 0x0d && byte === 0x0a ? 2 : 0;
-            case EOL.CR_OR_LF:
-                return byte === 0x0a || byte === 0x0d ? 1 : 0;
-            case EOL.CRLF_OR_LF:
-                return byte === 0x0a ? previousByte === 0x0d ? 2 : 1 : 0;
-        }
-    }
-}
-
 export interface ReadStringOptions {
     /** The text encoding. Defaults to utf-8. */
     encoding?: string;
 
     /**
-     * The initial buffer size for creating the string bytes. The buffer size duplicates itself when full, so the
+     * The initial buffer capacity for creating the string bytes. The buffer size duplicates itself when full, so the
      * higher this value is set the less buffer grows happen but the more memory is wasted for reading small lines.
      * Defaults to 1024.
      */
-    bufferSize?: number;
+    initialCapacity?: number;
 
     /** The maximum number of bytes (not characters!) to read. Default is unlimited. */
     maxBytes?: number;
+
 }
 
 export interface ReadLineOptions extends ReadStringOptions {
-    /** The EOL marker to stop reading at. Defaults to CRLF_OR_LF. */
-    eol?: EOL;
-
     /** True to include EOL marker in returned line. Defaults to false. */
     includeEOL?: boolean;
+}
 
-    /** True to stop reading at a null character. False (default) to do not so. */
-    nullTerminated?: boolean
+/**
+ * Options for the various read array methods of a data reader.
+ */
+export interface ReadArrayOptions {
+    /** Optional offset within the buffer to start writing to. Defaults to 0. */
+    offset?: number;
+
+    /** Optional number of bytes to read. Defaults to buffer size minus offset. */
+    size?: number
+}
+
+/**
+ * Options for the various multi-byte read array methods of a data reader.
+ */
+export interface ReadMultiByteArrayOptions extends ReadArrayOptions {
+    /** Optional endianness. Defaults to endianness the reader was configured with. */
+    endianness?: Endianness
 }
 
 /**
@@ -86,6 +66,12 @@ export class DataReader {
     private read: number = 0;
     private byte: number = 0;
     private bit: number = 0;
+
+    /** Cached sink to read unknown amount of bytes. */
+    private sink: WeakRef<Uint8ArraySink> | null = null;
+
+    /** Cached text decoder used to decode strings. A new one is created when text encoding changes. */
+    private textDecoder: TextDecoder | null = null;
 
     /**
      * Creates a new data reader for reading data from the given source.
@@ -122,10 +108,6 @@ export class DataReader {
      * @returns True if buffer has been filled or is still filled, false if end of stream is reached
      */
     private async fill(): Promise<boolean> {
-        if (this.byte < this.bufferSize) {
-            // No need to fill buffer because buffer still has unread bytes
-            return true;
-        }
         this.byte = 0;
         const { done, value } = await this.source.read();
         if (done) {
@@ -137,7 +119,7 @@ export class DataReader {
             // Data received, fill butter
             this.buffer = value;
             this.bufferSize = value.length;
-            return true;
+            return this.bufferSize > 0;
         }
     }
 
@@ -168,8 +150,7 @@ export class DataReader {
      * @return The read value. Null if end of stream has been reached.
      */
     public async readUint8(): Promise<number | null> {
-        if (this.bit === 0) {
-            // At byte boundary, whole byte can be read at once
+        if (this.bit === 0) { // At byte boundary, whole byte can be read at once
             if (this.byte >= this.bufferSize) {
                 if (!await this.fill()) {
                     return null;
@@ -179,8 +160,7 @@ export class DataReader {
             this.byte++;
             this.read++;
             return value;
-        } else {
-            // In middle of a byte. Read low bits, fill buffer and then read high bits and return combined byte
+        } else { // In middle of a byte. Read low bits, fill buffer and then read high bits and return combined byte
             const low = this.buffer[this.byte] >> this.bit;
             this.byte++;
             if (this.byte >= this.bufferSize) {
@@ -366,14 +346,12 @@ export class DataReader {
     /**
      * Reads an array of unsigned 16 bit values.
      *
-     * @param buffer     - The buffer to write the read bytes to.
-     * @param offset     - Offset within the buffer to start writing to. Defaults to 0.
-     * @param size       - Number of bytes to read. Defaults to buffer size minus offset.
-     * @param endianness - Optional endianness. Defaults to endianness the reader was configured with.
+     * @param buffer  - The buffer to write the read bytes to.
+     * @param options - Optional read array option.
      * @returns the number of read 16 bit values. 0 when end of stream is reached or 0 bytes were requested to read.
      */
-    public async readUint16Array(buffer: Uint16Array, offset = 0, size = buffer.length - offset,
-            endianness = this.endianness): Promise<number> {
+    public async readUint16Array(buffer: Uint16Array, { offset = 0, size = buffer.length - offset,
+            endianness = this.endianness }: ReadMultiByteArrayOptions = {}): Promise<number> {
         const read = await this.readUint8Array(new Uint8Array(buffer.buffer, offset * 2, size * 2)) >> 1;
         if (endianness !== Endianness.getNative()) {
             for (let i = offset + read - 1; i >= offset; --i) {
@@ -386,28 +364,23 @@ export class DataReader {
     /**
      * Reads an array of signed 16 bit values.
      *
-     * @param buffer     - The buffer to write the read bytes to.
-     * @param offset     - Offset within the buffer to start writing to. Defaults to 0.
-     * @param size       - Number of bytes to read. Defaults to buffer size minus offset.
-     * @param endianness - Optional endianness. Defaults to endianness the reader was configured with.
+     * @param buffer  - The buffer to write the read bytes to.
+     * @param options - Optional read array option.
      * @returns the number of read 16 bit values. 0 when end of stream is reached or 0 bytes were requested to read.
      */
-    public async readInt16Array(buffer: Int16Array, offset = 0, size = buffer.length - offset,
-            endianness = this.endianness): Promise<number> {
-        return this.readUint16Array(new Uint16Array(buffer.buffer), offset, size, endianness);
+    public async readInt16Array(buffer: Int16Array, options?: ReadMultiByteArrayOptions): Promise<number> {
+        return this.readUint16Array(new Uint16Array(buffer.buffer), options);
     }
 
     /**
      * Reads an array of unsigned 32 bit values.
      *
-     * @param buffer     - The buffer to write the read bytes to.
-     * @param offset     - Offset within the buffer to start writing to. Defaults to 0.
-     * @param size       - Number of bytes to read. Defaults to buffer size minus offset.
-     * @param endianness - Optional endianness. Defaults to endianness the reader was configured with.
+     * @param buffer  - The buffer to write the read bytes to.
+     * @param options - Optional read array option.
      * @returns the number of read 16 bit values. 0 when end of stream is reached or 0 bytes were requested to read.
      */
-    public async readUint32Array(buffer: Uint32Array, offset = 0, size = buffer.length - offset,
-            endianness = this.endianness): Promise<number> {
+    public async readUint32Array(buffer: Uint32Array, { offset = 0, size = buffer.length - offset,
+            endianness = this.endianness }: ReadMultiByteArrayOptions = {}): Promise<number> {
         const read = await this.readUint8Array(new Uint8Array(buffer.buffer, offset * 4, size * 4)) >> 2;
         if (endianness !== Endianness.getNative()) {
             for (let i = offset + read - 1; i >= offset; --i) {
@@ -420,29 +393,24 @@ export class DataReader {
     /**
      * Reads an array of signed 32 bit values.
      *
-     * @param buffer     - The buffer to write the read bytes to.
-     * @param offset     - Offset within the buffer to start writing to. Defaults to 0.
-     * @param size       - Number of bytes to read. Defaults to buffer size minus offset.
-     * @param endianness - Optional endianness. Defaults to endianness the reader was configured with.
+     * @param buffer  - The buffer to write the read bytes to.
+     * @param options - Optional read array option.
      * @returns the number of read 16 bit values. 0 when end of stream is reached or 0 bytes were requested to read.
      */
-    public async readInt32Array(buffer: Int32Array, offset = 0, size = buffer.length - offset,
-            endianness = this.endianness): Promise<number> {
-        return this.readUint32Array(new Uint32Array(buffer.buffer), offset, size, endianness);
+    public async readInt32Array(buffer: Int32Array, options?: ReadMultiByteArrayOptions): Promise<number> {
+        return this.readUint32Array(new Uint32Array(buffer.buffer), options);
     }
 
     /**
      * Reads an array of unsigned 64 bit values.
      *
-     * @param buffer     - The buffer to write the read bytes to.
-     * @param offset     - Offset within the buffer to start writing to. Defaults to 0.
-     * @param size       - Number of bytes to read. Defaults to buffer size minus offset.
-     * @param endianness - Optional endianness. Defaults to endianness the reader was configured with.
+     * @param buffer  - The buffer to write the read bytes to.
+     * @param options - Optional read array option.
      * @returns the number of read 16 bit values. 0 when end of stream is reached or 0 bytes were requested to read.
      */
-    public async readBigUint64Array(buffer: BigUint64Array, offset = 0, size = buffer.length - offset,
-            endianness = this.endianness): Promise<number> {
-        const read = await this.readUint8Array(new Uint8Array(buffer.buffer, offset * 8, size * 8)) >> 4;
+    public async readBigUint64Array(buffer: BigUint64Array, { offset = 0, size = buffer.length - offset,
+            endianness = this.endianness }: ReadMultiByteArrayOptions = {}): Promise<number> {
+        const read = await this.readUint8Array(new Uint8Array(buffer.buffer, offset * 8, size * 8)) >> 3;
         if (endianness !== Endianness.getNative()) {
             for (let i = offset + read - 1; i >= offset; --i) {
                 buffer[i] = Endianness.swap64(buffer[i]);
@@ -454,15 +422,12 @@ export class DataReader {
     /**
      * Reads an array of signed 64 bit values.
      *
-     * @param buffer     - The buffer to write the read bytes to.
-     * @param offset     - Offset within the buffer to start writing to. Defaults to 0.
-     * @param size       - Number of bytes to read. Defaults to buffer size minus offset.
-     * @param endianness - Optional endianness. Defaults to endianness the reader was configured with.
+     * @param buffer  - The buffer to write the read bytes to.
+     * @param options - Optional read array option.
      * @returns the number of read 16 bit values. 0 when end of stream is reached or 0 bytes were requested to read.
      */
-    public async readBigInt64Array(buffer: BigInt64Array, offset = 0, size = buffer.length - offset,
-            endianness = this.endianness): Promise<number> {
-        return this.readBigUint64Array(new BigUint64Array(buffer.buffer), offset, size, endianness);
+    public async readBigInt64Array(buffer: BigInt64Array, options?: ReadMultiByteArrayOptions): Promise<number> {
+        return this.readBigUint64Array(new BigUint64Array(buffer.buffer), options);
     }
 
     /**
@@ -476,7 +441,136 @@ export class DataReader {
     public async readString(size: number, encoding?: string): Promise<string> {
         const buffer = new Uint8Array(size);
         const read = await this.readUint8Array(buffer);
-        return new TextDecoder(encoding).decode(read < size ? buffer.subarray(0, read) : buffer);
+        return this.getTextDecoder(encoding).decode(read < size ? buffer.subarray(0, read) : buffer);
+    }
+
+    /**
+     * Returns a byte sink which is used internally to read an unknown amount of bytes. The sink together with its
+     * buffer is cached and re-used. The cache is weakly references so it can be garbage collected.
+     *
+     * Re-using the sink and its buffer drastically improves performance when reading many strings from the reader.
+     *
+     * @param initialCapacity - The initial capacity to use for a newly created sink. Ignored when a previous sink
+     *                          is reused.
+     * @returns the byte sink.
+     */
+    private getSink(initialCapacity?: number): Uint8ArraySink {
+        let sink = this.sink?.deref();
+        if (sink == null) {
+            sink = new Uint8ArraySink(initialCapacity);
+            this.sink = new WeakRef(sink);
+        } else {
+            sink.reset();
+        }
+        return sink;
+    }
+
+    /**
+     * Returns a text decoder for the given text encoding. The text decoder is cached and only replaced when the
+     * encoding changes.
+     *
+     * Re-using the text decoder improves performance when reading many strings from the reader.
+     *
+     * @param encoding - The text encoding.
+     * @returns the text decoder for the given encoding.
+     */
+    private getTextDecoder(encoding: string = "utf-8"): TextDecoder {
+        if (this.textDecoder?.encoding === encoding.toLowerCase()) {
+            return this.textDecoder;
+        } else {
+            return (this.textDecoder = new TextDecoder(encoding));
+        }
+    }
+
+    /**
+     * Reads bytes until the given stop value is found or the end of the stream has been reached or the maximum number
+     * of bytes to read has been reached.
+     *
+     * This method has an optimized path when reading at byte boundary. When stream is not at byte boundary then
+     * single bytes are read until finished.
+     *
+     * @param stopValue        - The value to stop at.
+     * @param initialCapacity  - Optional initial capacity of the byte sink used to store read bytes.
+     * @param maxBytes         - Optional maximum number of bytes to read. Default is reading until end of stream.
+     * @param includeStopValue - Set to true to include stop value in result array.
+     * @returns The read bytes or null when end of stream has been reached without reading any bytes. The returned
+     *          array is volatile because it is reused so process the data immediately before calling other methods
+     *          on the reader.
+     */
+    private async readUntil(stopValue: number, initialCapacity?: number, maxBytes?: number, includeStopValue = false):
+            Promise<Uint8ArraySink | null> {
+        const sink = this.getSink(initialCapacity);
+        let read = 0;
+        let end = false;
+        if (this.bit === 0) {
+            while (!end) {
+                if (this.byte >= this.bufferSize) {
+                    // End of buffer reached. Fill buffer with new data read from the stream.
+                    if (!await this.fill()) {
+                        // End of stream reached. Stop reading.
+                        end = true;
+
+                        // When no bytes have been read so far then return null to indicate the end of stream
+                        if (read === 0) {
+                            return null;
+                        }
+                        break;
+                    }
+                }
+
+                // Find the stop value within the current buffer
+                let index = this.buffer.indexOf(stopValue, this.byte);
+                const found = index !== -1;
+
+                // Increase index if stop value was found and must be included in result
+                if (found && includeStopValue) {
+                    index++;
+                }
+
+                // Determine the number of bytes to copy from the buffer. This is the current read position up to the
+                // position of the found stop value or (when stop value not found) this current read position up to the
+                // end of the buffer.
+                let size = found ? (index - this.byte) : (this.bufferSize - this.byte);
+
+                // When maxBytes are specified then truncate the size accordingly when enough bytes are read
+                if (maxBytes != null && size > maxBytes - read) {
+                    size = Math.min(size, maxBytes - read);
+                    end = true;
+                }
+
+                // Copy bytes from buffer to sink.
+                sink.write(this.buffer.subarray(this.byte, this.byte + size));
+
+                // When stop value has been found then skip the stop value (if not included) and end reading
+                if (found) {
+                    if (!includeStopValue) {
+                        size++;
+                    }
+                    end = true;
+                }
+
+                // Increase stream position and counters
+                this.byte += size;
+                this.read += size;
+                read += size;
+            }
+        } else {
+            while(maxBytes == null || read < maxBytes) {
+                const value = await this.readUint8();
+                if (value == null) {
+                    if (read === 0) {
+                        return null;
+                    }
+                    break;
+                }
+                if (value === stopValue) {
+                    break;
+                }
+                read++;
+                sink.write(value);
+            }
+        }
+        return sink;
     }
 
     /**
@@ -485,26 +579,11 @@ export class DataReader {
      * @returns the read line. Null when end of stream is reached.
      */
     public async readNullTerminatedString(options: ReadStringOptions = {}): Promise<string | null> {
-        const sink = new Uint8ArraySink(options.bufferSize ?? 1024);
-        let byte: number | null;
-        while ((byte = await this.readUint8()) != null) {
-            if (byte === 0) {
-                // null termination reached
-                break;
-            }
-            sink.write(byte);
-            if (options.maxBytes != null && sink.getSize() >= options.maxBytes) {
-                // Maximum number of bytes have been read
-                break;
-            }
-        }
-
-        if (byte == null && sink.getSize() === 0) {
-            // End-of-stream is reached and no data was read
+        const result = await this.readUntil(0, options.initialCapacity, options.maxBytes);
+        if (result == null) {
             return null;
         }
-
-        return new TextDecoder(options.encoding).decode(sink.getData());
+        return this.getTextDecoder(options.encoding).decode(result.getData(), {});
     }
 
     /**
@@ -513,49 +592,31 @@ export class DataReader {
      *
      * @returns the read line. Null when end of stream is reached.
      */
-    public async readLine(options: ReadLineOptions = {}): Promise<string | null> {
-        const sink = new Uint8ArraySink(options.bufferSize ?? 1024);
-        const eol = options.eol ?? EOL.CRLF_OR_LF;
-
-        let byte: number | null;
-        let previous = 0;
-        let eolSize = 0;
-        while ((byte = await this.readUint8()) != null) {
-            if (byte === 0 && options.nullTerminated === true) {
-                // null termination reached
-                break;
-            }
-            sink.write(byte);
-            eolSize = EOL.isEOL(eol, byte, previous);
-            if (eolSize > 0) {
-                // End-of-line has been reached
-                break;
-            }
-            previous = byte;
-            if (options.maxBytes != null && sink.getSize() >= options.maxBytes) {
-                // Maximum number of bytes have been read
-                break;
-            }
-        }
-
-        if (byte == null && sink.getSize() === 0) {
-            // End-of-stream is reached and no data was read
+    public async readLine({ includeEOL = false, initialCapacity, maxBytes, encoding }: ReadLineOptions = {}):
+            Promise<string | null> {
+        const result = await this.readUntil(0x0a, initialCapacity, maxBytes, true);
+        if (result == null) {
+            // End of stream reached without reading any data
             return null;
         }
-
-        const data = sink.getData();
-        return new TextDecoder(options.encoding).decode((options.includeEOL !== true && eolSize > 0)
-            ? data.subarray(0, -eolSize) : data);
+        if (!includeEOL) {
+            const size = result.getSize();
+            const len = result.at(size - 1) === 0x0a ? result.at(size - 2) === 0x0d ? 2 : 1 : 0;
+            if (len > 0) {
+                result.rewind(len);
+            }
+        }
+        return this.getTextDecoder(encoding).decode(result.getData());
     }
 }
 
 /**
- * Creates a data writer for the given stream, passes it to the given callback function, flushes the data writer
- * and release the stream writer lock after callback execution.
+ * Creates a data reader for the given stream, passes it to the given callback function and releases the stream reader
+ * lock after callback execution.
  *
- * @param stream   - The stream to write to.
- * @param callback - The callback function to call with the created data writer as argument.
- * @param options  - Optional data writer options.
+ * @param stream   - The stream to read from.
+ * @param callback - The callback function to call with the created data reader as argument.
+ * @param options  - Optional data reader options.
  */
 export async function readDataFromStream(stream: ReadableStream<Uint8Array>,
         callback: (reader: DataReader) => Promise<void> | void, options?: DataReaderOptions): Promise<void> {
