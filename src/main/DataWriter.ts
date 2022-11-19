@@ -9,7 +9,7 @@ import { DataWriterSink } from "./DataWriterSink";
 import { Endianness } from "./Endianness";
 
 /** The default buffer size (64KB). */
-export const DEFAULT_BUFFER_SIZE = 65536;
+const DEFAULT_BUFFER_SIZE = 65536;
 
 /**
  * Options for constructing a data writer.
