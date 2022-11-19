@@ -3,4 +3,5 @@
  * See LICENSE.md for licensing information
  */
 
+export * from "./FileInputStream";
 export * from "./FileOutputStream";
