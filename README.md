@@ -25,7 +25,7 @@ To read data you first have to create a source. A source is simply an object pro
 read(): Promise<ReadableStreamReadResult<Uint8Array>>;
 ```
 
-You might recognize this signature as it is provided by a reader from a [ReadableStream]. So if you have a standard readable stream from the [Streams API] then you can simply use `stream.getReader()` as a data source.
+You might recognize this signature as it is provided by a reader from a [ReadableStream]. So if you have a standard readable stream from the [Streams API] then you can simply use `stream.getReader()` as a data source (Remember to release the lock on the reader with `reader.releaseLock()` when you no longer need it).
 
 The datastream library also provides a `FileInputStream` implementation for reading from Node.js files and a `Uint8ArraySource` class which can be used to read directly from a static byte array.
 
@@ -145,6 +145,42 @@ The method returns `null` when end of stream is reached. So wrap it with a while
 
 ```typescript
 const lineWithEOL = await reader.readLine({ includeEOL: true });
+```
+
+### Working with streams
+
+If you work with a stream as input source then you have to release the lock on the reader acquired from the source in
+addition to closing the stream. So you may end up with a nested try..finally structure like this:
+
+```typescript
+const stream = new FileInputStream(filename);
+try {
+    const streamReader = stream.getReader();
+    try {
+        const dataReader = new DataReader(streamReader);
+        // Read stuff from data reader
+    } finally {
+        streamReader.releaseLock();
+    }
+} finally {
+    await stream.close();
+}
+```
+
+You can simplify this structure a little bit with the helper function `readDataFromStream` which creates the data
+reader and also released the lock on the stream reader. But closing the stream is still your own responsibility:
+
+```typescript
+import { readDataFromStream } from "@kayahr/datastream";
+
+const stream = new FileInputStream(filename);
+try {
+    await readDataFromStream(stream, async reader => {
+        // Read stuff from data reader
+    });
+} finally {
+    await stream.close();
+}
 ```
 
 [Streams API]: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API

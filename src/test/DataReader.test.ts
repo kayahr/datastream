@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 
 import { createTextEncoder } from "@kayahr/text-encoding";
 
-import { DataReader } from "../main/DataReader";
+import { DataReader, readDataFromStream } from "../main/DataReader";
 import { DataReaderSource } from "../main/DataReaderSource";
 import { Endianness } from "../main/Endianness";
 import { FileInputStream } from "../main/node/FileInputStream";
@@ -592,39 +592,87 @@ describe("DataReader", () => {
         const linesLF = "Line 1\nLine 2\n\nEmpty line";
         const linesCRLF = "Line 1\r\nLine 2\r\n\r\nEmpty line";
 
-        it("read LF terminated lines", async () => {
-            const reader = new DataReader(new MockDataReaderSource(Array.from(new TextEncoder().encode(linesLF))));
-            expect(await reader.readLine()).toBe("Line 1");
-            expect(await reader.readLine()).toBe("Line 2");
-            expect(await reader.readLine()).toBe("");
-            expect(await reader.readLine()).toBe("Empty line");
-            expect(await reader.readLine()).toBeNull();
-        });
-        it("read CRLF terminated lines", async () => {
-            const reader = new DataReader(new MockDataReaderSource(Array.from(new TextEncoder().encode(linesCRLF))));
-            expect(await reader.readLine()).toBe("Line 1");
-            expect(await reader.readLine()).toBe("Line 2");
-            expect(await reader.readLine()).toBe("");
-            expect(await reader.readLine()).toBe("Empty line");
-            expect(await reader.readLine()).toBeNull();
-        });
-        it("can keep EOL markers in CR terminated lines", async () => {
-            const reader = new DataReader(new MockDataReaderSource(Array.from(new TextEncoder().encode(linesLF))));
-            expect(await reader.readLine({ includeEOL: true })).toBe("Line 1\n");
-            expect(await reader.readLine({ includeEOL: true })).toBe("Line 2\n");
-            expect(await reader.readLine({ includeEOL: true })).toBe("\n");
-            expect(await reader.readLine({ includeEOL: true })).toBe("Empty line");
-            expect(await reader.readLine({ includeEOL: true })).toBeNull();
-        });
-        it("can keep EOL markers in CRLF terminated lines", async () => {
-            const reader = new DataReader(new MockDataReaderSource(Array.from(
-                new TextEncoder().encode(linesCRLF))));
-            expect(await reader.readLine({ includeEOL: true })).toBe("Line 1\r\n");
-            expect(await reader.readLine({ includeEOL: true })).toBe("Line 2\r\n");
-            expect(await reader.readLine({ includeEOL: true })).toBe("\r\n");
-            expect(await reader.readLine({ includeEOL: true })).toBe("Empty line");
-            expect(await reader.readLine({ includeEOL: true })).toBeNull();
-        });
+        for (const encoding of [ "utf-8", "utf-16le", "utf-16be" ]) {
+            describe(`with encoding ${encoding}`, () => {
+                it("read LF terminated lines", async () => {
+                    const reader = new DataReader(new MockDataReaderSource(Array.from(
+                        createTextEncoder(encoding).encode(linesLF))));
+                    const options = encoding === "utf-8" ? undefined : { encoding };
+                    expect(await reader.readLine(options)).toBe("Line 1");
+                    expect(await reader.readLine(options)).toBe("Line 2");
+                    expect(await reader.readLine(options)).toBe("");
+                    expect(await reader.readLine(options)).toBe("Empty line");
+                    expect(await reader.readLine(options)).toBeNull();
+                });
+                it("read LF terminated lines outside of byte boundary", async () => {
+                    const reader = new DataReader(new MockDataReaderSource(Array.from(shift4Bits(
+                        createTextEncoder(encoding).encode(linesLF)))));
+                    expect(await reader.readBit()).toBe(0);
+                    expect(await reader.readBit()).toBe(0);
+                    expect(await reader.readBit()).toBe(0);
+                    expect(await reader.readBit()).toBe(0);
+                    expect(await reader.readLine({ encoding })).toBe("Line 1");
+                    expect(await reader.readLine({ encoding })).toBe("Line 2");
+                    expect(await reader.readLine({ encoding })).toBe("");
+                    expect(await reader.readLine({ encoding })).toBe("Empty line");
+                    expect(await reader.readLine({ encoding })).toBeNull();
+                });
+                it("read CRLF terminated lines", async () => {
+                    const reader = new DataReader(new MockDataReaderSource(Array.from(
+                        createTextEncoder(encoding).encode(linesCRLF))));
+                    expect(await reader.readLine({ encoding })).toBe("Line 1");
+                    expect(await reader.readLine({ encoding })).toBe("Line 2");
+                    expect(await reader.readLine({ encoding })).toBe("");
+                    expect(await reader.readLine({ encoding })).toBe("Empty line");
+                    expect(await reader.readLine({ encoding })).toBeNull();
+                });
+                it("can keep EOL markers in CR terminated lines", async () => {
+                    const reader = new DataReader(new MockDataReaderSource(Array.from(
+                        createTextEncoder(encoding).encode(linesLF))));
+                    expect(await reader.readLine({ includeEOL: true, encoding })).toBe("Line 1\n");
+                    expect(await reader.readLine({ includeEOL: true, encoding })).toBe("Line 2\n");
+                    expect(await reader.readLine({ includeEOL: true, encoding })).toBe("\n");
+                    expect(await reader.readLine({ includeEOL: true, encoding })).toBe("Empty line");
+                    expect(await reader.readLine({ includeEOL: true, encoding })).toBeNull();
+                });
+                it("can keep EOL markers in CRLF terminated lines", async () => {
+                    const reader = new DataReader(new MockDataReaderSource(Array.from(
+                        createTextEncoder(encoding).encode(linesCRLF))));
+                    expect(await reader.readLine({ includeEOL: true, encoding })).toBe("Line 1\r\n");
+                    expect(await reader.readLine({ includeEOL: true, encoding })).toBe("Line 2\r\n");
+                    expect(await reader.readLine({ includeEOL: true, encoding })).toBe("\r\n");
+                    expect(await reader.readLine({ includeEOL: true, encoding })).toBe("Empty line");
+                    expect(await reader.readLine({ includeEOL: true, encoding })).toBeNull();
+                });
+                it("does not stop at null character by default", async () => {
+                    const reader = new DataReader(new MockDataReaderSource(
+                        Array.from(createTextEncoder(encoding).encode("Foo\0Bar"))));
+                    expect(await reader.readLine({ encoding })).toBe("Foo\0Bar");
+                    expect(await reader.readLine({ encoding })).toBeNull();
+                });
+                it(`can read Iliad`, async () => {
+                    const stream = new FileInputStream(resolve(__dirname, `../../src/test/data/iliad_${encoding}.txt`));
+                    try {
+                        await readDataFromStream(stream, async reader => {
+                            let line: string | null;
+                            let lines = 0;
+                            let chars = 0;
+                            let longest = 0;
+                            while ((line = await reader.readLine({ encoding })) != null) {
+                                lines++;
+                                chars += line.length;
+                                longest = Math.max(longest, line.length);
+                            }
+                            expect(lines).toBe(14408);
+                            expect(chars).toBe(686996);
+                            expect(longest).toBe(76);
+                        });
+                    } finally {
+                        await stream.close();
+                    }
+                });
+            });
+        }
         it("can limit the number of read bytes", async () => {
             const reader = new DataReader(new MockDataReaderSource(Array.from(new TextEncoder().encode(linesLF))));
             expect(await reader.readLine({ maxBytes: 4 })).toBe("Line");
@@ -640,35 +688,15 @@ describe("DataReader", () => {
             expect(await reader.readLine({ encoding: "Shift-JIS" })).toBe("塵も積もれば山となる。");
             expect(await reader.readLine({ encoding: "Shift-JIS" })).toBeNull();
         });
-        it("does not stop at null character by default", async () => {
-            const reader = new DataReader(new MockDataReaderSource(Array.from(new TextEncoder().encode("Foo\0Bar"))));
-            expect(await reader.readLine()).toBe("Foo\0Bar");
-            expect(await reader.readLine()).toBeNull();
-        });
-
-        if ((typeof process !== "undefined") && (process.release?.name === "node")) {
-            for (const encoding of [ "utf-8", "utf-16le", "utf-16be" ]) {
-                it(`can read Iliad in ${encoding}`, async () => {
-                    const stream = new FileInputStream(resolve(__dirname, `../../src/test/data/iliad_${encoding}.txt`));
-                    try {
-                        const reader = new DataReader(stream.getReader());
-                        let line: string | null;
-                        let lines = 0;
-                        let chars = 0;
-                        let longest = 0;
-                        while ((line = await reader.readLine({ encoding })) != null) {
-                            lines++;
-                            chars += line.length;
-                            longest = Math.max(longest, line.length);
-                        }
-                        expect(lines).toBe(14408);
-                        expect(chars).toBe(686996);
-                        expect(longest).toBe(76);
-                    } finally {
-                        await stream.close();
-                    }
+        it("can read UTF-16 line with specified maximum size", async () => {
+            const stream = new FileInputStream(resolve(__dirname, `../../src/test/data/iliad_utf-16le.txt`));
+            try {
+                await readDataFromStream(stream, async reader => {
+                    expect(await reader.readLine({ maxBytes: 24, encoding: "utf-16le" })).toBe("The Project");
                 });
+            } finally {
+                await stream.close();
             }
-        }
+        });
     });
 });
