@@ -72,6 +72,9 @@ export class Uint8ArraySink implements DataWriterSink {
         if (index < 0) {
             index += this.size;
         }
+        if (index >= this.size) {
+            return undefined;
+        }
         return this.buffer[index];
     }
 
@@ -94,6 +97,12 @@ export class Uint8ArraySink implements DataWriterSink {
         this.size = 0;
     }
 
+    /**
+     * Rewinds the sink by the given number of bytes. The size shrinks accordingly but the capacity stays the same as
+     * before.
+     *
+     * @param numBytes - The number of bytes to remove from the end of the sink.
+     */
     public rewind(numBytes: number): void {
         this.size = Math.max(0, this.size - numBytes);
     }
