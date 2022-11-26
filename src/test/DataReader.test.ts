@@ -66,6 +66,15 @@ describe("DataReader", () => {
         });
     });
 
+    describe("getEncoding", () => {
+        it("returns 'utf-8' if not set via constructor", () => {
+            expect(new DataReader(new MockDataReaderSource()).getEncoding()).toBe("utf-8");
+        });
+        it("returns encoding set via constructor", () => {
+            expect(new DataReader(new MockDataReaderSource(), { encoding: "utf-16le" }).getEncoding()).toBe("utf-16le");
+        });
+    });
+
     describe("getRead", () => {
         it("returns the number of read bytes", async () => {
             const reader = new DataReader(new MockDataReaderSource([ 1, 2, 3 ], 2));

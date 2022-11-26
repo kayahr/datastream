@@ -13,10 +13,13 @@ import { Uint8ArraySink } from "./Uint8ArraySink";
 export interface DataReaderOptions {
     /** The endianness to use for reading multi-byte values. Defaults to native endianness. */
     endianness?: Endianness;
+
+    /** The encoding used to read strings. Defaults to "utf-8". */
+    encoding?: string;
 }
 
 export interface ReadStringOptions {
-    /** The text encoding. Defaults to utf-8. */
+    /** The text encoding. Defaults to encoding the reader was configured with. */
     encoding?: string;
 
     /**
@@ -62,6 +65,7 @@ export class DataReader {
     private readonly source: DataReaderSource;
     private buffer: Uint8Array;
     private readonly endianness: Endianness;
+    private readonly encoding: string;
     private bufferSize: number;
     private read: number = 0;
     private byte: number = 0;
@@ -78,10 +82,11 @@ export class DataReader {
      *
      * @param source - The source to read from.
      */
-    public constructor(source: DataReaderSource, { endianness = getNativeEndianness() }:
+    public constructor(source: DataReaderSource, { endianness = getNativeEndianness(), encoding = "utf-8" }:
             DataReaderOptions = {}) {
         this.source = source;
         this.endianness = endianness;
+        this.encoding = encoding;
         this.bufferSize = 0;
         this.buffer = new Uint8Array(0);
     }
@@ -93,6 +98,15 @@ export class DataReader {
      */
     public getEndianness(): Endianness {
         return this.endianness;
+    }
+
+    /**
+     * Returns the default encoding of the reader.
+     *
+     * @returns the default encoding used when no encoding is specified as parameter to the various string read methods.
+     */
+    public getEncoding(): string {
+        return this.encoding;
     }
 
     /**
@@ -435,7 +449,7 @@ export class DataReader {
      *
      * @param size     - The maximum number of bytes to read. Only in ASCII encoding this is the same as the length
      *                   of the string. In other encodings the returned string may be shorter.
-     * @param encoding - The encoding. Defaults to "utf-8".
+     * @param encoding - The encoding. Defaults to encoding the reader was configured with.
      * @returns the read string. May be smaller than requested size. Empty when end of stream is reached.
      */
     public async readString(size: number, encoding?: string): Promise<string> {
@@ -471,10 +485,10 @@ export class DataReader {
      *
      * Re-using the text decoder improves performance when reading many strings from the reader.
      *
-     * @param encoding - The text encoding.
+     * @param encoding - The encoding. Defaults to encoding the reader was configured with.
      * @returns the text decoder for the given encoding.
      */
-    private getTextDecoder(encoding: string = "utf-8"): TextDecoder {
+    private getTextDecoder(encoding: string = this.encoding): TextDecoder {
         if (this.textDecoder?.encoding === encoding.toLowerCase()) {
             return this.textDecoder;
         } else {
@@ -629,8 +643,9 @@ export class DataReader {
      */
     public async readNullTerminatedString(options: ReadStringOptions = {}): Promise<string | null> {
         let result: Uint8ArraySink | null;
-        if (options.encoding?.toLowerCase().startsWith("utf-16") === true) {
-            const bigEndian = options.encoding?.toLowerCase().endsWith("be");
+        const encoding = (options.encoding ?? this.encoding).toLowerCase();
+        if (encoding.startsWith("utf-16")) {
+            const bigEndian = encoding.endsWith("be");
             result = await this.readUntil16(0, bigEndian, options.initialCapacity, options.maxBytes);
         } else {
             result = await this.readUntil(0, options.initialCapacity, options.maxBytes);
@@ -639,7 +654,7 @@ export class DataReader {
             // End of stream reached without reading any data
             return null;
         }
-        return this.getTextDecoder(options.encoding).decode(result.getData(), {});
+        return this.getTextDecoder(encoding).decode(result.getData(), {});
     }
 
     /**
@@ -648,11 +663,12 @@ export class DataReader {
      *
      * @returns the read line. Null when end of stream is reached.
      */
-    public async readLine({ includeEOL = false, initialCapacity, maxBytes, encoding }: ReadLineOptions = {}):
-            Promise<string | null> {
+    public async readLine({ includeEOL = false, initialCapacity, maxBytes, encoding = this.encoding }:
+            ReadLineOptions = {}): Promise<string | null> {
         let result: Uint8ArraySink | null;
-        const utf16 = encoding?.toLowerCase().startsWith("utf-16") === true;
-        const bigEndian = utf16 && encoding?.toLowerCase().endsWith("be");
+        encoding = encoding.toLowerCase();
+        const utf16 = encoding.startsWith("utf-16");
+        const bigEndian = utf16 && encoding.endsWith("be");
         if (utf16) {
             result = await this.readUntil16(0x0a, bigEndian, initialCapacity, maxBytes, true);
         } else {

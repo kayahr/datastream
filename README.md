@@ -43,12 +43,15 @@ import { DataReader } from "@kayahr/datastream";
 const reader = new DataReader(source);
 ```
 
-By default the data reader uses the native endianness. You can set a specific endianness as an option:
+By default the data reader uses the native endianness for reading multi-byte values and utf-8 encoding for reading strings. You can set a specific endianness and/or encoding as options:
 
 ```typescript
 import { Endianness } from "@kayahr/datastream";
 
-const reader = new DataReader(source, { endianness: Endianness.BIG });
+const reader = new DataReader(source, {
+    endianness: Endianness.BIG,
+    encoding: "utf-16be"
+});
 ```
 
 ### Reading single values
