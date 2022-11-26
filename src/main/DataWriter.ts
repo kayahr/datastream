@@ -435,7 +435,7 @@ export class DataWriter {
      * Writes a string.
      *
      * @param text     - The text to write.
-     * @param encoding - The encoding. Defaults to "utf-8".
+     * @param encoding - The encoding. Defaults to encoding the writer was configured with.
      */
     public async writeString(text: string, encoding = this.encoding): Promise<void> {
         return this.writeUint8Array(createTextEncoder(encoding).encode(text));
