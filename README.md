@@ -18,6 +18,37 @@ The following data types are currently supported:
 
 See [text-encodings] for a list of supported text encodings.
 
+Usage
+-----
+
+Install the library as a dependency in your project:
+
+```
+npm install @kayahr/datastream
+```
+
+And then use it like in this example:
+
+```typescript
+import { DataReader, DataWriter, Uint8ArraySource, Uint8ArraySink } from "@kayahr/datastream";
+
+const sink = new Uint8ArraySink();
+const writer = new DataWriter(sink);
+await writer.writeBit(1);
+await writer.writeBit(2);
+await writer.writeUint16(0x1234);
+await writer.flush();
+const data = sink.getData();
+
+const source = new Uint8ArraySource(data);
+const reader = new DataReader(source);
+const bit1 = await reader.readBit();
+const bit2 = await reader.readBit();
+const u16 = await reader.readUint16();
+```
+
+Instead of simply using a Uint8Array as sink and source you can also read from streams and write to streams which is explained in the next sections.
+
 DataReaderSource
 ----------------
 
@@ -152,10 +183,9 @@ The method returns `null` when end of stream is reached. So wrap it with a while
 const lineWithEOL = await reader.readLine({ includeEOL: true });
 ```
 
-### Working with streams
+### Reading from streams
 
-If you work with a stream as input source then you have to release the lock on the reader acquired from the source in
-addition to closing the stream. So you may end up with a nested try..finally structure like this:
+If you work with a readable stream as input source then you have to release the lock on the stream reader acquired from the stream in addition to closing the stream. So you may end up with a nested try..finally structure like this:
 
 ```typescript
 const stream = new FileInputStream(filename);
@@ -173,7 +203,7 @@ try {
 ```
 
 You can simplify this structure a little bit with the helper function `readDataFromStream` which creates the data
-reader and also released the lock on the stream reader. But closing the stream is still your own responsibility:
+reader and also releases the lock on the stream reader. But closing the stream is still your own responsibility:
 
 ```typescript
 import { readDataFromStream } from "@kayahr/datastream";
@@ -187,6 +217,19 @@ try {
     await stream.close();
 }
 ```
+
+DataWriterSink
+--------------
+
+To write data you first have to create a sink. A sink is simply an object providing the following method:
+
+```typescript
+write(chunk: Uint8Array): Promise<void>;
+```
+
+You might recognize this signature as it is provided by a writer from a [WritableStream]. So if you have a standard writable stream from the [Streams API] then you can simply use `stream.getWriter()` as a data sink (Remember to release the lock on the writer with `writer.releaseLock()` when you no longer need it).
+
+The datastream library also provides a `FileOutputStream` implementation for writing to Node.js files and a `Uint8ArraySink` class which can be used to write directly to a growing byte array.
 
 DataWriter
 ----------
@@ -265,6 +308,43 @@ This project depends on the [text-encodings] project to support a lot of text en
 ```typescript
 import "@kayahr/text-encoding/encodings/shift_jis"; // Imports a specific text encoding
 import "@kayahr/text-encoding/encodings";           // Imports all text encodings
+```
+
+### Writing to streams
+
+If you work with a writable stream as output sink then you have to release the lock on the stream writer acquired from the stream in addition to closing the stream. So you may end up with a nested try..finally structure like this:
+
+```typescript
+const stream = new FileOutputStream(filename);
+try {
+    const streamWriter = stream.getWriter();
+    try {
+        const dataWriter = new DataWriter(streamWriter);
+        // Write stuff to data writer
+        await dataWriter.flush();
+    } finally {
+        streamWriter.releaseLock();
+    }
+} finally {
+    await stream.close();
+}
+```
+
+You can simplify this structure a little bit with the helper function `writeDataToStream` which creates the data
+writer and also releases the lock on the stream writer. But closing the stream is still your own responsibility:
+
+```typescript
+import { writeDataToStream } from "@kayahr/datastream";
+
+const stream = new FileOutputStream(filename);
+try {
+    await writeDataToStream(stream, async writer => {
+        // Read stuff from data reader
+        await writer.flush();
+    });
+} finally {
+    await stream.close();
+}
 ```
 
 [API Doc]: https://kayahr.github.io/datastream/
