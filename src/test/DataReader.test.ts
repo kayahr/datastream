@@ -563,7 +563,7 @@ describe("DataReader", () => {
             expect(await reader.readNullTerminatedString({ maxBytes: 3 })).toBe("Str");
             expect(await reader.readNullTerminatedString()).toBe("ing 1");
         });
-        it("can read Shift-JIS lines", async () => {
+        it("can read Shift-JIS encoded lines", async () => {
             const text = "灯台もと暗し。\0蛙の子は蛙。\0塵も積もれば山となる。";
             const reader = new DataReader(new MockDataReaderSource(Array.from(createTextEncoder("Shift-JIS")
                 .encode(text))));
@@ -572,6 +572,20 @@ describe("DataReader", () => {
             expect(await reader.readNullTerminatedString({ encoding: "Shift-JIS" })).toBe("塵も積もれば山となる。");
             expect(await reader.readNullTerminatedString({ encoding: "Shift-JIS" })).toBeNull();
         });
+        for (const encoding of [ "UTF-8", "UTF-16BE", "UTF-16LE" ]) {
+            it(`can read ${encoding} encoded lines`, async () => {
+                const text = "á©ðéíïœøµñóöäëßþú®𡝳\0åœüæÁ¢ÐÉЀÍÏŒØµÑԀÓÖÄË§Þ𡝳Ú\0𡝳®ÅŒÜÆ"; // cspell:disable-line
+                const reader = new DataReader(new MockDataReaderSource(Array.from(createTextEncoder(encoding)
+                    .encode(text))));
+                expect(await reader.readNullTerminatedString({ encoding }))
+                    .toBe("á©ðéíïœøµñóöäëßþú®𡝳");  // cspell:disable-line
+                expect(await reader.readNullTerminatedString({ encoding }))
+                    .toBe("åœüæÁ¢ÐÉЀÍÏŒØµÑԀÓÖÄË§Þ𡝳Ú");  // cspell:disable-line
+                expect(await reader.readNullTerminatedString({ encoding }))
+                    .toBe("𡝳®ÅŒÜÆ");  // cspell:disable-line
+                expect(await reader.readNullTerminatedString({ encoding })).toBeNull();
+            });
+        }
     });
 
     describe("readLine", () => {
@@ -633,7 +647,7 @@ describe("DataReader", () => {
         });
 
         if ((typeof process !== "undefined") && (process.release?.name === "node")) {
-            for (const encoding of [ "utf-8" /* , "utf-16le", "utf-16be" */ ]) {
+            for (const encoding of [ "utf-8", "utf-16le", "utf-16be" ]) {
                 it(`can read Iliad in ${encoding}`, async () => {
                     const stream = new FileInputStream(resolve(__dirname, `../../src/test/data/iliad_${encoding}.txt`));
                     try {

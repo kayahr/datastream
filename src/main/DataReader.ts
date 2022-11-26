@@ -555,7 +555,7 @@ export class DataReader {
                 read += size;
             }
         } else {
-            while(maxBytes == null || read < maxBytes) {
+            while (maxBytes == null || read < maxBytes) {
                 const value = await this.readUint8();
                 if (value == null) {
                     if (read === 0) {
@@ -563,11 +563,60 @@ export class DataReader {
                     }
                     break;
                 }
-                if (value === stopValue) {
+                if (value === stopValue && !includeStopValue) {
                     break;
                 }
                 read++;
                 sink.write(value);
+                if (value === stopValue) {
+                    break;
+                }
+            }
+        }
+        return sink;
+    }
+
+    /**
+     * Reads 16 bit values until the given stop value is found or the end of the stream has been reached or the
+     * maximum number of bytes to read has been reached.
+     *
+     * This method has an optimized path when reading at byte boundary. When stream is not at byte boundary then
+     * single bytes are read until finished.
+     *
+     * @param stopValue        - The value to stop at.
+     * @param bigEndian        - True if big endian, false if little endian.
+     * @param initialCapacity  - Optional initial capacity of the byte sink used to store read bytes.
+     * @param maxBytes         - Optional maximum number of bytes to read. Default is reading until end of stream.
+     * @param includeStopValue - Set to true to include stop value in result array.
+     * @returns The read bytes or null when end of stream has been reached without reading any bytes. The returned
+     *          array is volatile because it is reused so process the data immediately before calling other methods
+     *          on the reader.
+     */
+    private async readUntil16(stopValue: number, bigEndian: boolean, initialCapacity?: number, maxBytes?: number,
+            includeStopValue = false): Promise<Uint8ArraySink | null> {
+        const sink = this.getSink(initialCapacity);
+        let read = 0;
+        while(maxBytes == null || read < maxBytes) {
+            const value = await this.readUint16(bigEndian ? Endianness.BIG : Endianness.LITTLE);
+            if (value == null) {
+                if (read === 0) {
+                    return null;
+                }
+                break;
+            }
+            if (value === stopValue && !includeStopValue) {
+                break;
+            }
+            read += 2;
+            if (bigEndian) {
+                sink.write(value >> 8);
+                sink.write(value & 0xff);
+            } else {
+                sink.write(value & 0xff);
+                sink.write(value >> 8);
+            }
+            if (value === stopValue) {
+                break;
             }
         }
         return sink;
@@ -579,8 +628,15 @@ export class DataReader {
      * @returns the read line. Null when end of stream is reached.
      */
     public async readNullTerminatedString(options: ReadStringOptions = {}): Promise<string | null> {
-        const result = await this.readUntil(0, options.initialCapacity, options.maxBytes);
+        let result: Uint8ArraySink | null;
+        if (options.encoding?.toLowerCase().startsWith("utf-16") === true) {
+            const bigEndian = options.encoding?.toLowerCase().endsWith("be");
+            result = await this.readUntil16(0, bigEndian, options.initialCapacity, options.maxBytes);
+        } else {
+            result = await this.readUntil(0, options.initialCapacity, options.maxBytes);
+        }
         if (result == null) {
+            // End of stream reached without reading any data
             return null;
         }
         return this.getTextDecoder(options.encoding).decode(result.getData(), {});
@@ -594,14 +650,34 @@ export class DataReader {
      */
     public async readLine({ includeEOL = false, initialCapacity, maxBytes, encoding }: ReadLineOptions = {}):
             Promise<string | null> {
-        const result = await this.readUntil(0x0a, initialCapacity, maxBytes, true);
+        let result: Uint8ArraySink | null;
+        const utf16 = encoding?.toLowerCase().startsWith("utf-16") === true;
+        const bigEndian = utf16 && encoding?.toLowerCase().endsWith("be");
+        if (utf16) {
+            result = await this.readUntil16(0x0a, bigEndian, initialCapacity, maxBytes, true);
+        } else {
+            result = await this.readUntil(0x0a, initialCapacity, maxBytes, true);
+        }
         if (result == null) {
             // End of stream reached without reading any data
             return null;
         }
         if (!includeEOL) {
+            let len: number;
             const size = result.getSize();
-            const len = result.at(size - 1) === 0x0a ? result.at(size - 2) === 0x0d ? 2 : 1 : 0;
+            if (utf16) {
+                if (bigEndian) {
+                    len = (result.at(size - 1) === 0x0a && result.at(size - 2) === 0x00)
+                        ? (result.at(size - 3) === 0x0d && result.at(size - 4) === 0x00)
+                        ? 4 : 2 : 0;
+                } else {
+                    len = (result.at(size - 1) === 0x00 && result.at(size - 2) === 0x0a)
+                        ? (result.at(size - 3) === 0x00 && result.at(size - 4) === 0x0d)
+                        ? 4 : 2 : 0;
+                }
+            } else {
+                len = result.at(size - 1) === 0x0a ? result.at(size - 2) === 0x0d ? 2 : 1 : 0;
+            }
             if (len > 0) {
                 result.rewind(len);
             }
