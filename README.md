@@ -1,7 +1,7 @@
-[GitHub] | [NPM] | [API Doc]
-
-datastream
+Datastream
 ==========
+
+[GitHub] | [NPM] | [API Doc]
 
 Data stream classes for reading and writing all kinds of data types. For input and output the data stream classes uses very simple source and sink interfaces which are compatible to the readers and writers provided by [ReadableStream] and [WritableStream] from the [Streams API]. But this library also provides some easy to use stream implementations to use Node.js files and Byte Arrays as source/sink.
 
