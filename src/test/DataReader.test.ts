@@ -4,7 +4,7 @@ import { createTextEncoder } from "@kayahr/text-encoding";
 
 import { DataReader, readDataFromStream } from "../main/DataReader";
 import { DataReaderSource } from "../main/DataReaderSource";
-import { Endianness } from "../main/Endianness";
+import { Endianness, getNativeEndianness } from "../main/Endianness";
 import { FileInputStream } from "../main/node/FileInputStream";
 
 class MockDataReaderSource implements DataReaderSource {
@@ -56,7 +56,7 @@ function shift4Bits(values: Uint8Array): Uint8Array {
 describe("DataReader", () => {
     describe("getEndianness", () => {
         it("returns native endianness if not set via constructor", () => {
-            expect(new DataReader(new MockDataReaderSource()).getEndianness()).toBe(Endianness.getNative());
+            expect(new DataReader(new MockDataReaderSource()).getEndianness()).toBe(getNativeEndianness());
         });
         it("returns endianness set via constructor", () => {
             expect(new DataReader(new MockDataReaderSource(), { endianness: Endianness.LITTLE })

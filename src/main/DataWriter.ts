@@ -6,7 +6,7 @@
 import { createTextEncoder } from "@kayahr/text-encoding";
 
 import { DataWriterSink } from "./DataWriterSink";
-import { Endianness } from "./Endianness";
+import { Endianness, getNativeEndianness } from "./Endianness";
 
 /** The default buffer size (64KB). */
 const DEFAULT_BUFFER_SIZE = 65536;
@@ -293,7 +293,7 @@ export class DataWriter {
      * @param endianness - Optional endianness. Defaults to endianness the writer was configured with.
      */
     public async writeUint16s(values: Uint16Array | number[], endianness: Endianness = this.endianness): Promise<void> {
-        if (endianness === Endianness.getNative()) {
+        if (endianness === getNativeEndianness()) {
             if (values instanceof Array) {
                 values = Uint16Array.from(values);
             }
@@ -316,7 +316,7 @@ export class DataWriter {
      * @param endianness - Optional endianness. Defaults to endianness the writer was configured with.
      */
     public async writeInt16s(values: Int16Array | number[], endianness: Endianness = this.endianness): Promise<void> {
-        if (endianness === Endianness.getNative()) {
+        if (endianness === getNativeEndianness()) {
             if (values instanceof Array) {
                 values = Int16Array.from(values);
             }
@@ -339,7 +339,7 @@ export class DataWriter {
      * @param endianness - Optional endianness. Defaults to endianness the writer was configured with.
      */
     public async writeUint32s(values: Uint32Array | number[], endianness: Endianness = this.endianness): Promise<void> {
-        if (endianness === Endianness.getNative()) {
+        if (endianness === getNativeEndianness()) {
             if (values instanceof Array) {
                 values = Uint32Array.from(values);
             }
@@ -362,7 +362,7 @@ export class DataWriter {
      * @param endianness - Optional endianness. Defaults to endianness the writer was configured with.
      */
     public async writeInt32s(values: Int32Array | number[], endianness: Endianness = this.endianness): Promise<void> {
-        if (endianness === Endianness.getNative()) {
+        if (endianness === getNativeEndianness()) {
             if (values instanceof Array) {
                 values = Int32Array.from(values);
             }

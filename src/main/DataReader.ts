@@ -4,7 +4,7 @@
  */
 
 import { DataReaderSource } from "./DataReaderSource";
-import { Endianness } from "./Endianness";
+import { Endianness, getNativeEndianness, swap16, swap32, swap64 } from "./Endianness";
 import { Uint8ArraySink } from "./Uint8ArraySink";
 
 /**
@@ -78,7 +78,7 @@ export class DataReader {
      *
      * @param source - The source to read from.
      */
-    public constructor(source: DataReaderSource, { endianness = Endianness.getNative() }:
+    public constructor(source: DataReaderSource, { endianness = getNativeEndianness() }:
             DataReaderOptions = {}) {
         this.source = source;
         this.endianness = endianness;
@@ -353,9 +353,9 @@ export class DataReader {
     public async readUint16Array(buffer: Uint16Array, { offset = 0, size = buffer.length - offset,
             endianness = this.endianness }: ReadMultiByteArrayOptions = {}): Promise<number> {
         const read = await this.readUint8Array(new Uint8Array(buffer.buffer, offset * 2, size * 2)) >> 1;
-        if (endianness !== Endianness.getNative()) {
+        if (endianness !== getNativeEndianness()) {
             for (let i = offset + read - 1; i >= offset; --i) {
-                buffer[i] = Endianness.swap16(buffer[i]);
+                buffer[i] = swap16(buffer[i]);
             }
         }
         return read;
@@ -382,9 +382,9 @@ export class DataReader {
     public async readUint32Array(buffer: Uint32Array, { offset = 0, size = buffer.length - offset,
             endianness = this.endianness }: ReadMultiByteArrayOptions = {}): Promise<number> {
         const read = await this.readUint8Array(new Uint8Array(buffer.buffer, offset * 4, size * 4)) >> 2;
-        if (endianness !== Endianness.getNative()) {
+        if (endianness !== getNativeEndianness()) {
             for (let i = offset + read - 1; i >= offset; --i) {
-                buffer[i] = Endianness.swap32(buffer[i]);
+                buffer[i] = swap32(buffer[i]);
             }
         }
         return read;
@@ -411,9 +411,9 @@ export class DataReader {
     public async readBigUint64Array(buffer: BigUint64Array, { offset = 0, size = buffer.length - offset,
             endianness = this.endianness }: ReadMultiByteArrayOptions = {}): Promise<number> {
         const read = await this.readUint8Array(new Uint8Array(buffer.buffer, offset * 8, size * 8)) >> 3;
-        if (endianness !== Endianness.getNative()) {
+        if (endianness !== getNativeEndianness()) {
             for (let i = offset + read - 1; i >= offset; --i) {
-                buffer[i] = Endianness.swap64(buffer[i]);
+                buffer[i] = swap64(buffer[i]);
             }
         }
         return read;
