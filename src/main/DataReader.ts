@@ -452,7 +452,7 @@ export class DataReader {
      * @param encoding - The encoding. Defaults to encoding the reader was configured with.
      * @returns the read string. May be smaller than requested size. Empty when end of stream is reached.
      */
-    public async readString(size: number, encoding?: string): Promise<string> {
+    public async readString(size: number, encoding = this.encoding): Promise<string> {
         const buffer = new Uint8Array(size);
         const read = await this.readUint8Array(buffer);
         return this.getTextDecoder(encoding).decode(read < size ? buffer.subarray(0, read) : buffer);
@@ -485,10 +485,10 @@ export class DataReader {
      *
      * Re-using the text decoder improves performance when reading many strings from the reader.
      *
-     * @param encoding - The encoding. Defaults to encoding the reader was configured with.
+     * @param encoding - The encoding.
      * @returns the text decoder for the given encoding.
      */
-    private getTextDecoder(encoding: string = this.encoding): TextDecoder {
+    private getTextDecoder(encoding: string): TextDecoder {
         if (this.textDecoder?.encoding === encoding.toLowerCase()) {
             return this.textDecoder;
         } else {

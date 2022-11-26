@@ -529,6 +529,13 @@ describe("DataReader", () => {
             ]));
             expect(await reader.readString(256, "Shift-JIS")).toBe("可愛さ余って憎さ百倍");
         });
+        it("reads a string in default encoding of the reader", async () => {
+            const reader = new DataReader(new MockDataReaderSource([
+                0x89, 0xc2, 0x88, 0xa4, 0x82, 0xb3, 0x97, 0x5d, 0x82, 0xc1,
+                0x82, 0xc4, 0x91, 0x9e, 0x82, 0xb3, 0x95, 0x53, 0x94, 0x7b
+            ]), { encoding: "Shift-JIS" });
+            expect(await reader.readString(256)).toBe("可愛さ余って憎さ百倍");
+        });
     });
 
     describe("readNullTerminatedString", () => {

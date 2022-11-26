@@ -86,7 +86,7 @@
         "typescript": "4.9.3"
     },
     "dependencies": {
-        "@kayahr/text-encoding": "^1.1.1",
+        "@kayahr/text-encoding": "^1.1.2",
         "tslib": "^2.4.1",
         "web-streams-polyfill": "^3.2.1"
     }
