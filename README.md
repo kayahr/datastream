@@ -188,6 +188,85 @@ try {
 }
 ```
 
+DataWriter
+----------
+
+To write data to a stream create a new DataWriter instance and pass the sink to it.
+
+```typescript
+import { DataWriter } from "@kayahr/datastream";
+
+const writer = new DataWriter(sink);
+```
+
+By default the data writer uses the native endianness for writing multi-byte values, UTF-8 encoding for writing strings and a buffer size of 64 KiB. You can set specific settings through options:
+
+```typescript
+import { Endianness } from "@kayahr/datastream";
+
+const writer = new DataWriter(sink, {
+    endianness: Endianness.BIG,
+    encoding: "utf-16be",
+    bufferSize: 8192
+});
+```
+
+### Writing values
+
+Writing single bits, bytes, multi-byte values, arrays and strings works like this:
+
+```typescript
+await writer.writeBit(1);
+await writer.writeUint8(5);
+await writer.writeInt8(-3);
+await writer.writeUint16(10000);
+await writer.writeInt16(-5000);
+await writer.writeUint32(5762874);
+await writer.writeInt32(-2357622);
+await writer.writeBigUint64(75721771n);
+await writer.writeBigInt64(-3247534n);
+await writer.writeUint8Array(new Uint8Array(values));
+await writer.writeUint8Array(new Int8Array(values));
+await writer.writeUint16Array(new Uint16Array(values));
+await writer.writeUInt16Array(new Int16Array(values));
+await writer.writeUint32Array(new Uint32Array(values));
+await writer.writeUInt32Array(new Int32Array(values));
+await writer.writeBigUint64Array(new BigUint64Array(values));
+await writer.writeBigInt64Array(new BigInt64Array(values));
+await writer.writeString("Foo");
+```
+
+All write methods return a promise but you don't actually need to await it. The write operation is only asynchronous when the buffer is full and is asynchronously written to the sink. It is perfectly fine to write more data while the asynchronous write operation is still running. So usually it is is enough to just await the last write operation.
+
+In case you are finished writing to the writer you have to flush the buffer to ensure it is written to the sink:
+
+```typescript
+await writer.flush();
+```
+
+When writing multi-bytes you can specify the endianness. If you don't do this then the global endianness of the writer is used which defaults to the native endianness. Example for specifying endianness:
+
+```typescript
+await writer.writeUint32(123456, Endianness.BIG)
+```
+
+When writing strings then you can specify the text encoding. If you don't do this then the global encoding of the writer is used which defaults to UTF-8. Example for specifying encoding:
+
+```typescript
+await writer.writeString("灯台もと暗し。", "Shift-JIS")
+```
+
+If you want to write null-terminated strings or lines then append `"\0"` or EOF characters like `"\r\n"` yourself.
+
+### Text-Encodings
+
+This project depends on the [text-encodings] project to support a lot of text encodings. But by default no encoding is loaded so only the default UTF-8 encoding is available. If you want to write strings in other encodings then you have to import the specific encodings or all encodings yourself:
+
+```typescript
+import "@kayahr/text-encoding/encodings/shift_jis"; // Imports a specific text encoding
+import "@kayahr/text-encoding/encodings";           // Imports all text encodings
+```
+
 [API Doc]: https://kayahr.github.io/datastream/
 [GitHub]: https://github.com/kayahr/datastream
 [NPM]: https://www.npmjs.com/package/@kayahr/datastream
