@@ -19,7 +19,7 @@ export namespace Endianness {
     /**
      * Returns the native endianness of the system.
      *
-     * @return The system's native endianness.
+     * @returns the system's native endianness.
      */
     export function getNative(): Endianness {
         if (nativeEndianness == null) {
@@ -34,7 +34,7 @@ export namespace Endianness {
      * Swaps endianness of given 16 bit value.
      *
      * @param value - The value to swap.
-     * @return The swapped value.
+     * @returns the swapped value.
      */
     export function swap16(value: number): number {
         return ((value & 0xff) << 8) | (value >> 8);
@@ -44,7 +44,7 @@ export namespace Endianness {
      * Swaps endianness of given 32 bit value.
      *
      * @param value - The value to swap.
-     * @return The swapped value.
+     * @returns the swapped value.
      */
     export function swap32(value: number): number {
         return (((value & 0xff) << 24)
@@ -57,7 +57,7 @@ export namespace Endianness {
      * Swaps endianness of given 64 bit value.
      *
      * @param value - The value to swap.
-     * @return The swapped value.
+     * @returns the swapped value.
      */
     export function swap64(value: bigint): bigint {
         return ((value & 0xffn) << 56n)

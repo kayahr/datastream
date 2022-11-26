@@ -89,7 +89,7 @@ export class DataReader {
     /**
      * Returns the default endianness of the reader.
      *
-     * @return The default endianness used when no endianness is specified as parameter to the various read methods.
+     * @returns the default endianness used when no endianness is specified as parameter to the various read methods.
      */
     public getEndianness(): Endianness {
         return this.endianness;
@@ -126,7 +126,7 @@ export class DataReader {
     /**
      * Reads and returns a single bit from the stream.
      *
-     * @return The read bit. Null if end of stream has been reached.
+     * @returns the read bit. Null if end of stream has been reached.
      */
     public async readBit(): Promise<number | null> {
         if (this.byte >= this.bufferSize) {
@@ -147,7 +147,7 @@ export class DataReader {
     /**
      * Reads and returns an unsigned 8 bit value.
      *
-     * @return The read value. Null if end of stream has been reached.
+     * @returns the read value. Null if end of stream has been reached.
      */
     public async readUint8(): Promise<number | null> {
         if (this.bit === 0) { // At byte boundary, whole byte can be read at once

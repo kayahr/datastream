@@ -10,7 +10,7 @@ export interface DataReaderSource {
     /**
      * Reads a chunk from the source.
      *
-     * @return The read result.
+     * @returns the read result.
      */
     read(): Promise<ReadableStreamReadResult<Uint8Array>> | ReadableStreamReadResult<Uint8Array>;
 }

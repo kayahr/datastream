@@ -56,7 +56,7 @@ export class DataWriter {
     /**
      * Returns the default endianness of the writer.
      *
-     * @return The default endianness used when no endianness is specified as parameter to the various write methods.
+     * @returns the default endianness used when no endianness is specified as parameter to the various write methods.
      */
     public getEndianness(): Endianness {
         return this.endianness;
@@ -68,7 +68,7 @@ export class DataWriter {
      * When a write operation fails then this counter is invalid and may not be in sync with the output sink any
      * longer.
      *
-     * @return The number of written bytes.
+     * @returns the number of written bytes.
      */
     public getWritten(): number {
         return this.written;

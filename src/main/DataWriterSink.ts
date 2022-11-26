@@ -11,7 +11,7 @@ export interface DataWriterSink {
      * Writes the given chunk to the sink.
      *
      * @param chunk - Chunk of data to write to the sink.
-     * @return A promise if write operation is asynchronous, nothing when write operation is synchronous.
+     * @returns a promise if write operation is asynchronous, nothing when write operation is synchronous.
      */
     write(chunk: Uint8Array): Promise<void> | void;
 }
