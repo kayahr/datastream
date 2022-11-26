@@ -1,3 +1,5 @@
+[GitHub] | [NPM] | [API Doc]
+
 datastream
 ==========
 
@@ -183,6 +185,9 @@ try {
 }
 ```
 
+[API Doc]: https://kayahr.github.io/datastream/
+[GitHub]: https://github.com/kayahr/datastream
+[NPM]: https://www.npmjs.com/package/@kayahr/datastream
 [Streams API]: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
 [ReadableStream]: https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream
 [WritableStream]: https://developer.mozilla.org/en-US/docs/Web/API/WritableStream
