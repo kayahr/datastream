@@ -34,9 +34,13 @@ export class FileInputStream extends ReadableStream<Uint8Array> {
 
             async pull(controller: ReadableStreamDefaultController<Uint8Array>) {
                 const buffer = new Uint8Array(chunkSize);
-                const read = (await self?.file?.read(buffer, 0, chunkSize))?.bytesRead ?? 0;
-                const chunk = buffer.subarray(0, read);
-                controller.enqueue(chunk);
+                const read = (await self?.file?.read(buffer, 0, chunkSize))?.bytesRead;
+                if (read != null && read > 0) {
+                    const chunk = buffer.subarray(0, read);
+                    controller.enqueue(chunk);
+                } else {
+                    controller.close();
+                }
             }
         });
         self = this;

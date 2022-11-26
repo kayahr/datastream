@@ -68,7 +68,7 @@
     },
     "devDependencies": {
         "@kayahr/better-jest": "1.0.4",
-        "@kayahr/eslint-config": "2.5.0",
+        "@kayahr/eslint-config": "2.6.0",
         "@kayahr/jest-electron-runner": "29.1.1",
         "@types/jest": "29.2.3",
         "@typescript-eslint/eslint-plugin": "5.44.0",
