@@ -218,6 +218,27 @@ try {
 }
 ```
 
+
+### Look-ahead
+
+DataReader supports look-ahead operations which remembers the current stream position and restores it after the read-ahead operation is finished.
+
+Some examples:
+
+```typescript
+const nextLine = await reader.lookAhead(() => reader.readLine());
+```
+
+```typescript
+const { foo, bar } = await reader.lookAhead(async () => {
+    const foo = await reader.readBit();
+    const bar = await reader.readUint8();
+    return { foo, bar };
+});
+```
+
+You can perform any read operation and as many as you like inside the function passed to the `lookAhead` method. You can even nest a look-ahead inside the look-ahead. But keep in mind that reading large amount of data in a look-ahead results in buffers piling up in memory because they need to be recorded to be able to restore the previous stream position because it is not possible to seek in a stream. So keep your look-ahead operations short so ideally they are performed within the same buffer or simply the next one.
+
 DataWriterSink
 --------------
 

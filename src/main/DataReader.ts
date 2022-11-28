@@ -63,6 +63,9 @@ export interface ReadMultiByteArrayOptions extends ReadArrayOptions {
  */
 export class DataReader {
     private readonly source: DataReaderSource;
+    private readonly nextBuffers: Uint8Array[] = [];
+    private readonly previousBuffers: Uint8Array[] = [];
+    private recordBuffers = false;
     private buffer: Uint8Array;
     private readonly endianness: Endianness;
     private readonly encoding: string;
@@ -117,13 +120,30 @@ export class DataReader {
     }
 
     /**
+     * Reads the next buffer. This is either the next buffer which was recorded before by a look-ahead operation or
+     * the next buffer read from the stream.
+     *
+     * @returns the next buffer.
+     */
+    private async readNextBuffer(): Promise<ReadableStreamReadResult<Uint8Array>> {
+        const value = this.nextBuffers.shift();
+        if (value != null) {
+            return { done: false, value };
+        }
+        return this.source.read();
+    }
+
+    /**
      * Fills the buffer when empty.
      *
      * @returns True if buffer has been filled or is still filled, false if end of stream is reached
      */
     private async fill(): Promise<boolean> {
+        if (this.recordBuffers) {
+            this.previousBuffers.push(this.buffer);
+        }
         this.byte = 0;
-        const { done, value } = await this.source.read();
+        const { done, value } = await this.readNextBuffer();
         if (done) {
             // End of stream has been reached
             this.buffer = new Uint8Array(0);
@@ -134,6 +154,46 @@ export class DataReader {
             this.buffer = value;
             this.bufferSize = value.length;
             return this.bufferSize > 0;
+        }
+    }
+
+    private restoreBuffer(buffer: Uint8Array): void {
+        while (this.buffer !== buffer) {
+            const previousBuffer = this.previousBuffers.pop();
+            if (previousBuffer != null) {
+                this.nextBuffers.unshift(this.buffer);
+                this.buffer = previousBuffer;
+                this.bufferSize = previousBuffer.length;
+            }
+        }
+    }
+
+    /**
+     * Executes the given operation as a look-ahead operation. So any reading from the reader is a look-ahead and the
+     * stream position will be reset when operation is finished. Look-ahead operations can be nested.
+     *
+     * Note that while reading data in a look-ahead operation buffers read from the stream pile up in memory because
+     * it is not possible to seek in a stream. So the only way to rewind to the previous position in the stream is to
+     * remember all the buffers read since then. So keep look-ahead operations short so in the best case the operation
+     * takes place in the same or the next buffer.
+     *
+     * @param operation - The look-ahead operation to perform.
+     */
+    public async lookAhead<T>(operation: () => Promise<T>): Promise<T> {
+        const origByte = this.byte;
+        const origBit = this.bit;
+        const origRead = this.read;
+        const origRecordBuffers = this.recordBuffers;
+        const origBuffer = this.buffer;
+        this.recordBuffers = true;
+        try {
+            return await operation();
+        } finally {
+            this.byte = origByte;
+            this.bit = origBit;
+            this.read = origRead;
+            this.recordBuffers = origRecordBuffers;
+            this.restoreBuffer(origBuffer);
         }
     }
 

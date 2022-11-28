@@ -715,4 +715,37 @@ describe("DataReader", () => {
             }
         });
     });
+
+    describe("lookAhead", () => {
+        const text = "Line 1\nLine 2\nAnother line 3\nYet another line 4\nWhat about another line 5\nLast line 6";
+        const bytes = new TextEncoder().encode(text);
+        for (const bufferSize of [ 1, 5, 32, 1024 ]) {
+            it(`can look ahead in a stream with buffer size ${bufferSize}`, async () => {
+                const reader = new DataReader(new MockDataReaderSource(Array.from(bytes), bufferSize));
+                expect(await reader.readLine()).toBe("Line 1");
+                expect(await reader.lookAhead(async () => {
+                    expect(await reader.readLine()).toBe("Line 2");
+                    expect(await reader.lookAhead(async () => {
+                        expect(await reader.readLine()).toBe("Another line 3");
+                        expect(await reader.readLine()).toBe("Yet another line 4");
+                        return reader.getRead();
+                    })).toBe(48);
+                    expect(reader.getRead()).toBe(14);
+                    expect(await reader.readLine()).toBe("Another line 3");
+                    expect(await reader.readLine()).toBe("Yet another line 4");
+                    expect(await reader.readLine()).toBe("What about another line 5");
+                    expect(await reader.readLine()).toBe("Last line 6");
+                    expect(await reader.readLine()).toBe(null);
+                    return reader.getRead();
+                })).toBe(bytes.length);
+                expect(reader.getRead()).toBe(7);
+                expect(await reader.readLine()).toBe("Line 2");
+                expect(await reader.readLine()).toBe("Another line 3");
+                expect(await reader.readLine()).toBe("Yet another line 4");
+                expect(await reader.readLine()).toBe("What about another line 5");
+                expect(await reader.readLine()).toBe("Last line 6");
+                expect(await reader.readLine()).toBe(null);
+            });
+        }
+    });
 });
