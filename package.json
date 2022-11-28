@@ -1,7 +1,7 @@
 {
     "$schema": "http://json.schemastore.org/package",
     "name": "@kayahr/datastream",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Data stream classes for writing and reading all kinds of data types, even single bits",
     "keywords": [
         "typescript",
