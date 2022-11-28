@@ -70,7 +70,8 @@ export class DataReader {
     private readonly endianness: Endianness;
     private readonly encoding: string;
     private bufferSize: number;
-    private read: number = 0;
+    private bytesRead: number = 0;
+    private bitsRead: number = 0;
     private byte: number = 0;
     private bit: number = 0;
 
@@ -115,8 +116,15 @@ export class DataReader {
     /**
      * @returns the number of bytes that have been read so far.
      */
-    public getRead(): number {
-        return this.read;
+    public getBytesRead(): number {
+        return this.bytesRead;
+    }
+
+    /**
+     * @returns the number of bits that have been read so far.
+     */
+    public getBitsRead(): number {
+        return this.bitsRead;
     }
 
     /**
@@ -185,11 +193,12 @@ export class DataReader {
             const bitsToSkip = Math.min(bits, (8 - this.bit));
             skipped += bitsToSkip;
             bits -= bitsToSkip;
+            this.bitsRead += bitsToSkip;
             this.bit += bitsToSkip;
             if (this.bit >= 8) {
                 this.bit = 0;
                 this.byte++;
-                this.read++;
+                this.bytesRead++;
             }
         }
 
@@ -204,11 +213,13 @@ export class DataReader {
                 }
             }
             const availableBytes = Math.min(bytesToSkip, this.bufferSize - this.byte);
-            const availableBits = availableBytes << 3;
+            const availableBits = availableBytes * 8;
             bytesToSkip -= availableBytes;
             skipped += availableBits;
             bits -= availableBits;
             this.byte += availableBytes;
+            this.bytesRead += availableBytes;
+            this.bitsRead += availableBytes * 8;
         }
 
         // Skip remaining bits
@@ -222,6 +233,7 @@ export class DataReader {
             }
             this.bit += bits;
             skipped += bits;
+            this.bitsRead += bits;
         }
 
         return skipped;
@@ -240,7 +252,7 @@ export class DataReader {
      *         given number if end of stream has been reached.
      */
     public async skipBytes(bytes: number): Promise<number> {
-        return await this.skipBits(bytes << 3) >> 3;
+        return Math.floor(await this.skipBits(bytes * 8) / 8);
     }
 
     /**
@@ -254,21 +266,37 @@ export class DataReader {
      *
      * @param operation - The look-ahead operation to perform.
      */
-    public async lookAhead<T>(operation: () => Promise<T>): Promise<T> {
+    public async lookAhead<T>(operation: (commit: (values?: number, bitsPerValue?: number) => void) => Promise<T>):
+            Promise<T> {
         const origByte = this.byte;
         const origBit = this.bit;
-        const origRead = this.read;
+        const origReadBytes = this.bytesRead;
+        const origReadBits = this.bitsRead;
         const origRecordBuffers = this.recordBuffers;
         const origBuffer = this.buffer;
         this.recordBuffers = true;
+        let committedBits = 0;
+        const commit = (values?: number, bitsPerValue?: number): void => {
+            if (values == null) {
+                values = this.bitsRead - origReadBits;
+                bitsPerValue = 1;
+            } else {
+                bitsPerValue ??= 8;
+            }
+            committedBits = values * bitsPerValue;
+        };
         try {
-            return await operation();
+            return await operation(commit);
         } finally {
             this.byte = origByte;
             this.bit = origBit;
-            this.read = origRead;
+            this.bytesRead = origReadBytes;
+            this.bitsRead = origReadBits;
             this.recordBuffers = origRecordBuffers;
             this.restoreBuffer(origBuffer);
+            if (committedBits > 0) {
+                await this.skipBits(committedBits);
+            }
         }
     }
 
@@ -285,10 +313,11 @@ export class DataReader {
         }
         const value = (this.buffer[this.byte] >> this.bit) & 1;
         this.bit++;
+        this.bitsRead += 1;
         if (this.bit >= 8) {
             this.bit = 0;
             this.byte++;
-            this.read++;
+            this.bytesRead++;
         }
         return value;
     }
@@ -328,11 +357,14 @@ export class DataReader {
             }
             const value = this.buffer[this.byte];
             this.byte++;
-            this.read++;
+            this.bytesRead++;
+            this.bitsRead += 8;
             return value;
         } else { // In middle of a byte. Read low bits, fill buffer and then read high bits and return combined byte
             const low = this.buffer[this.byte] >> this.bit;
             this.byte++;
+            this.bytesRead++;
+            this.bitsRead += 8;
             if (this.byte >= this.bufferSize) {
                 if (!await this.fill()) {
                     return null;
@@ -485,7 +517,8 @@ export class DataReader {
                 buffer.set(chunk, offset + read);
                 read += chunkSize;
                 this.byte += chunkSize;
-                this.read += chunkSize;
+                this.bytesRead += chunkSize;
+                this.bitsRead += chunkSize * 8;
             }
         } else {
             // In middle of a byte. Have to read bytes one by one
@@ -721,7 +754,8 @@ export class DataReader {
 
                 // Increase stream position and counters
                 this.byte += size;
-                this.read += size;
+                this.bytesRead += size;
+                this.bitsRead += size * 8;
                 read += size;
             }
         } else {

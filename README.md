@@ -261,6 +261,22 @@ const { foo, bar } = await reader.lookAhead(async () => {
 
 You can perform any read operation and as many as you like inside the function passed to the `lookAhead` method. You can even nest a look-ahead inside the look-ahead. But keep in mind that reading large amount of data in a look-ahead results in buffers piling up in memory because they need to be recorded to be able to restore the previous stream position because it is not possible to seek in a stream. So keep your look-ahead operations short so ideally they are performed within the same buffer or simply the next one.
 
+A look-ahead function can also decide to commit a specific amount of bytes or bits as finally read. This is useful for example if you read ahead lets say 20 bytes to scan the content, then you see that it begins with 3 bytes you are looking for so you commit these 3 bytes so the stream pointer only rewinds by 17 bytes:
+
+```typescript
+const foo = await reader.lookAhead(async commit => {
+    const string = await.readString(20);
+    if (string.startsWith("foo")) {
+        commit(3);
+        return "foo";
+    } else {
+        return null;
+    }
+});
+```
+
+When you call `commit()` without parameters then all data read in the look-ahead operation is committed. If you want to commit a number of bits instead of bytes then pass `1` as second parameter. This second parameter defines the bits per value which defaults to 8. So `commit(12)` is the same as `commit(12, 8)` which commits twelve 8-bit values. `commit(12, 1)` commits twelve 1-bit values (12 bits).
+
 DataWriterSink
 --------------
 
