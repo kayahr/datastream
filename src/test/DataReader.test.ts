@@ -716,6 +716,58 @@ describe("DataReader", () => {
         });
     });
 
+    describe("skipBits", () => {
+        const data = createTestData();
+        for (const bufferSize of [ 1, 5, 32, 1024 ]) {
+            it(`skips given number of bits when reading with buffer size ${bufferSize}`, async () => {
+                const reader1 = new DataReader(new MockDataReaderSource(data, bufferSize));
+                const reader2 = new DataReader(new MockDataReaderSource(data, bufferSize));
+                for (let skip = 1; skip < 27; skip++) {
+                    const read1 = await reader1.skipBits(skip);
+                    const read2 = await reader2.readBits(skip);
+                    expect(read1).toBe(read2?.length ?? 0);
+                    const byte1 = await reader1.readUint8();
+                    const byte2 = await reader2.readUint8();
+                    expect(byte1).toBe(byte2);
+                }
+            });
+        }
+    });
+
+    describe("skipBytes", () => {
+        const data = createTestData();
+        for (const bufferSize of [ 1, 5, 32, 1024 ]) {
+            it(`skips given number of bytes when reading with buffer size ${bufferSize} at byte boundary`,
+                    async () => {
+                const reader1 = new DataReader(new MockDataReaderSource(data, bufferSize));
+                const reader2 = new DataReader(new MockDataReaderSource(data, bufferSize));
+                for (let skip = 1; skip < 11; skip++) {
+                    const read1 = await reader1.skipBytes(skip);
+                    const read2 = await reader2.readUint8Array(new Uint8Array(skip));
+                    expect(read1).toBe(read2);
+                    const byte1 = await reader1.readUint8();
+                    const byte2 = await reader2.readUint8();
+                    expect(byte1).toBe(byte2);
+                }
+            });
+            it(`skips given number of bytes when reading with buffer size ${bufferSize} outside byte boundary`,
+                    async () => {
+                const reader1 = new DataReader(new MockDataReaderSource(data, bufferSize));
+                const reader2 = new DataReader(new MockDataReaderSource(data, bufferSize));
+                await reader1.skipBits(3);
+                await reader2.skipBits(3);
+                for (let skip = 1; skip < 11; skip++) {
+                    const read1 = await reader1.skipBytes(skip);
+                    const read2 = await reader2.readUint8Array(new Uint8Array(skip));
+                    expect(read1).toBe(read2);
+                    const byte1 = await reader1.readUint8();
+                    const byte2 = await reader2.readUint8();
+                    expect(byte1).toBe(byte2);
+                }
+            });
+        }
+    });
+
     describe("lookAhead", () => {
         const text = "Line 1\nLine 2\nAnother line 3\nYet another line 4\nWhat about another line 5\nLast line 6";
         const bytes = new TextEncoder().encode(text);

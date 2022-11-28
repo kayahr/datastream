@@ -169,6 +169,81 @@ export class DataReader {
     }
 
     /**
+     * Skips the given number of bits. This is not the same as simply reading the given number of bits and ignoring
+     * the read data. Instead it is optimized to first skip as many bits as needed to get to a byte boundary then
+     * skipping full bytes inside current buffer, optionally fetching new buffers and finally skipping the remaining
+     * number of bits.
+     *
+     * @param bits - The number of bits to skip.
+     * @return The actual number of skipped bits. Will be lower than given number if end of stream has been reached.
+     */
+    public async skipBits(bits: number): Promise<number> {
+        let skipped = 0;
+
+        // Get to next byte boundary if not already there
+        if (this.bit > 0) {
+            const bitsToSkip = Math.min(bits, (8 - this.bit));
+            skipped += bitsToSkip;
+            bits -= bitsToSkip;
+            this.bit += bitsToSkip;
+            if (this.bit >= 8) {
+                this.bit = 0;
+                this.byte++;
+                this.read++;
+            }
+        }
+
+        // Skip full bytes
+        let bytesToSkip = bits >>> 3;
+        while (bytesToSkip > 0) {
+            // Fill buffer if needed
+            if (this.byte >= this.bufferSize) {
+                if (!await this.fill()) {
+                    // End-of-stream reached
+                    return skipped;
+                }
+            }
+            const availableBytes = Math.min(bytesToSkip, this.bufferSize - this.byte);
+            const availableBits = availableBytes << 3;
+            bytesToSkip -= availableBytes;
+            skipped += availableBits;
+            bits -= availableBits;
+            this.byte += availableBytes;
+        }
+
+        // Skip remaining bits
+        if (bits > 0) {
+            // Fill buffer if needed
+            if (this.byte >= this.bufferSize) {
+                if (!await this.fill()) {
+                    // End-of-stream reached
+                    return skipped;
+                }
+            }
+            this.bit += bits;
+            skipped += bits;
+        }
+
+        return skipped;
+    }
+
+    /**
+     * Skips the given number of bytes. This is not the same as simply reading the given number of bytes and ignoring
+     * the read data. Instead it is optimized to first skip as many bits as needed to get to a byte boundary then
+     * skipping full bytes inside the current buffer, optionally fetching new buffers and finally skipping the
+     * remaining bits.
+     *
+     * Actually this is the same as calling {@link skipBits} with the number of bytes converted to the number of bits.
+     *
+     * @param bytes - The number of bytes to skip.
+     * @return The actual number of fully skipped bytes (not counting partially skipped bytes). Will be lower than
+     *         given number if end of stream has been reached.
+     */
+    public async skipBytes(bytes: number): Promise<number> {
+        return await this.skipBits(bytes << 3) >> 3;
+    }
+
+    /**
      * Executes the given operation as a look-ahead operation. So any reading from the reader is a look-ahead and the
      * stream position will be reset when operation is finished. Look-ahead operations can be nested.
      *
@@ -216,6 +291,27 @@ export class DataReader {
             this.read++;
         }
         return value;
+    }
+
+    /**
+     * Reads the given number of bits and returns them as a number array.
+     *
+     * TODO This can be optimized by reading the bits directly from the buffer instead of asynchronously reading bit
+     * by bit.
+     *
+     * @param numBits - The number of bits to read.
+     * @returns The read bits. Empty array when end of stream has been reached without reading any bit.
+     */
+    public async readBits(numBits: number): Promise<number[]> {
+        const bits: number[] = [];
+        for (let i = 0; i < numBits; ++i) {
+            const bit = await this.readBit();
+            if (bit == null) {
+                break;
+            }
+            bits.push(bit);
+        }
+        return bits;
     }
 
     /**

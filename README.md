@@ -8,6 +8,7 @@ Data stream classes for reading and writing all kinds of data types. For input a
 The following data types are currently supported:
 
 * Single bits
+* Arrays of bits
 * Unsigned and signed bytes
 * Unsigned and signed 16, 32 and 64 bit values (little and big endian)
 * Unsigned and signed byte arrays
@@ -132,6 +133,15 @@ const valuesRead = await reader.readInt32Array(buffer, {
 });
 ```
 
+
+### Reading bit arrays
+
+Reading a list of bits is a little bit different then the other array read methods. Instead of passing an array to fill you only specify the number of bits you want to read and you get a number array where each entry represents a single bit. When end-of-stream has been reached without reading any bits then the returned array is empty.
+
+```typescript
+const bits = await this.readBits(10);
+```
+
 ### Reading strings
 
 A fixed-length string can be read like this:
@@ -218,10 +228,22 @@ try {
 }
 ```
 
+### Skipping data
+
+Instead of reading data you can also simply skip data. This is faster than reading/ignoring data because it fast-forwards through the current and subsequently read buffers without actually looking at the data.
+
+```typescript
+const skippedBits = await reader.skipBits(30);
+await fullySkippedBytes = await reader.skipBytes(5);
+```
+
+`skipBits` returns the number of actually skipped bits which may be lower than the requested number of bits when end-of-stream has been reached.
+
+`skipBytes` returns the number of full bytes that have been skipped (not counting partially read bytes). Again this can be lower than the requested number of bytes when end-of-stream has been reached.
 
 ### Look-ahead
 
-DataReader supports look-ahead operations which remembers the current stream position and restores it after the read-ahead operation is finished.
+`DataReader` supports look-ahead operations which remembers the current stream position and restores it after the read-ahead operation is finished.
 
 Some examples:
 
