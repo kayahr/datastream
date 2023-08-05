@@ -68,26 +68,26 @@
         ]
     },
     "devDependencies": {
-        "@kayahr/better-jest": "1.1.0",
-        "@kayahr/eslint-config": "2.7.0",
-        "@kayahr/jest-electron-runner": "29.4.0",
-        "@types/jest": "29.5.1",
-        "@typescript-eslint/eslint-plugin": "5.59.6",
-        "@typescript-eslint/parser": "5.59.6",
-        "cspell": "6.31.1",
-        "eslint": "8.41.0",
-        "eslint-plugin-deprecation": "1.4.1",
+        "@kayahr/better-jest": "1.1.2",
+        "@kayahr/eslint-config": "2.8.0",
+        "@kayahr/jest-electron-runner": "29.7.0",
+        "@types/jest": "29.5.3",
+        "@typescript-eslint/eslint-plugin": "6.2.1",
+        "@typescript-eslint/parser": "6.2.1",
+        "cspell": "6.31.2",
+        "eslint": "8.46.0",
+        "eslint-plugin-deprecation": "1.5.0",
         "eslint-plugin-simple-import-sort": "10.0.0",
-        "jest": "29.5.0",
+        "jest": "29.6.2",
         "rimraf": "5.0.1",
         "source-map-support": "0.5.21",
         "tmp-promise": "3.0.3",
-        "typedoc": "0.24.7",
-        "typescript": "5.0.4"
+        "typedoc": "0.24.8",
+        "typescript": "5.1.6"
     },
     "dependencies": {
         "@kayahr/text-encoding": "^1.2.0",
-        "tslib": "^2.5.2",
+        "tslib": "^2.6.1",
         "web-streams-polyfill": "^3.2.1"
     }
 }
