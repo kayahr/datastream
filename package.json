@@ -88,6 +88,6 @@
     "dependencies": {
         "@kayahr/text-encoding": "^1.2.1",
         "tslib": "^2.6.2",
-        "web-streams-polyfill": "^3.2.1"
+        "web-streams-polyfill": "^3.3.2"
     }
 }
