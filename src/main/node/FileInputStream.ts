@@ -4,7 +4,6 @@
  */
 
 import { FileHandle, open } from "fs/promises";
-import { ReadableStream } from "web-streams-polyfill/ponyfill";
 
 /**
  * File input stream for Node.js.

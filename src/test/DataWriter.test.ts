@@ -16,7 +16,7 @@ describe("DataWriter", () => {
             const stream = new FileOutputStream(tmpFile);
             try {
                 await writeDataToStream(stream, async writer => {
-                    void writer.writeString("Test text");
+                    writer.writeString("Test text");
                     await writer.flush();
                 });
             } finally {
@@ -62,13 +62,13 @@ describe("DataWriter", () => {
         it("returns the number of written bytes", async () => {
             const writer = new DataWriter(new Uint8ArraySink());
             expect(writer.getWritten()).toBe(0);
-            void writer.writeUint8(1);
+            writer.writeUint8(1);
             expect(writer.getWritten()).toBe(1);
-            void writer.writeUint16(1);
+            writer.writeUint16(1);
             expect(writer.getWritten()).toBe(3);
-            void writer.writeUint32(1);
+            writer.writeUint32(1);
             expect(writer.getWritten()).toBe(7);
-            void writer.writeBigUint64(1n);
+            writer.writeBigUint64(1n);
             expect(writer.getWritten()).toBe(15);
             await writer.flush();
         });
@@ -79,33 +79,33 @@ describe("DataWriter", () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 2 });
             // Byte 1
-            void writer.writeBit(1);
-            void writer.writeBit(1);
-            void writer.writeBit(0);
-            void writer.writeBit(0);
-            void writer.writeBit(1);
-            void writer.writeBit(0);
-            void writer.writeBit(1);
-            void writer.writeBit(0);
+            writer.writeBit(1);
+            writer.writeBit(1);
+            writer.writeBit(0);
+            writer.writeBit(0);
+            writer.writeBit(1);
+            writer.writeBit(0);
+            writer.writeBit(1);
+            writer.writeBit(0);
             // Byte 2
-            void writer.writeBit(0);
-            void writer.writeBit(0);
-            void writer.writeBit(1);
-            void writer.writeBit(1);
-            void writer.writeBit(0);
-            void writer.writeBit(1);
-            void writer.writeBit(0);
-            void writer.writeBit(1);
+            writer.writeBit(0);
+            writer.writeBit(0);
+            writer.writeBit(1);
+            writer.writeBit(1);
+            writer.writeBit(0);
+            writer.writeBit(1);
+            writer.writeBit(0);
+            writer.writeBit(1);
             // Byte 3 (only 4 bits are written)
-            void writer.writeBit(0);
-            void writer.writeBit(0);
-            void writer.writeBit(1);
-            void writer.writeBit(1);
+            writer.writeBit(0);
+            writer.writeBit(0);
+            writer.writeBit(1);
+            writer.writeBit(1);
             await writer.flush();
             // Byte 4 (only 3 bits are written)
-            void writer.writeBit(1);
-            void writer.writeBit(0);
-            void writer.writeBit(1);
+            writer.writeBit(1);
+            writer.writeBit(0);
+            writer.writeBit(1);
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([ 0b01010011, 0b10101100, 0b1100, 0b101 ]);
         });
@@ -115,18 +115,18 @@ describe("DataWriter", () => {
         it("writes single unsigned bytes at byte boundary", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 2 });
-            void writer.writeUint8(0x17);
-            void writer.writeUint8(0x8f);
-            void writer.writeUint8(0x4a);
+            writer.writeUint8(0x17);
+            writer.writeUint8(0x8f);
+            writer.writeUint8(0x4a);
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([ 0x17, 0x8f, 0x4a ]);
         });
         it("writes single unsigned bytes outside byte boundary", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 2 });
-            void writer.writeBit(1);
-            void writer.writeUint8(0b11001010);
-            void writer.writeUint8(0b10100011);
+            writer.writeBit(1);
+            writer.writeUint8(0b11001010);
+            writer.writeUint8(0b10100011);
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([ 0b10010101, 0b1000111, 0b1 ]);
         });
@@ -136,23 +136,23 @@ describe("DataWriter", () => {
         it("writes single signed bytes at byte boundary", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 2 });
-            void writer.writeInt8(0);
-            void writer.writeInt8(1);
-            void writer.writeInt8(-1);
-            void writer.writeInt8(127);
-            void writer.writeInt8(-128);
+            writer.writeInt8(0);
+            writer.writeInt8(1);
+            writer.writeInt8(-1);
+            writer.writeInt8(127);
+            writer.writeInt8(-128);
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([ 0x00, 0x01, 0xff, 0x7f, 0x80 ]);
         });
         it("writes single signed bytes outside byte boundary", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 2 });
-            void writer.writeBit(1);
-            void writer.writeInt8(0);
-            void writer.writeInt8(1);
-            void writer.writeInt8(-1);
-            void writer.writeInt8(127);
-            void writer.writeInt8(-128);
+            writer.writeBit(1);
+            writer.writeInt8(0);
+            writer.writeInt8(1);
+            writer.writeInt8(-1);
+            writer.writeInt8(127);
+            writer.writeInt8(-128);
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([
                 0b00000001,
@@ -169,16 +169,16 @@ describe("DataWriter", () => {
         it("writes single unsigned 16 bit value in little endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 3, endianness: Endianness.LITTLE });
-            void writer.writeUint16(0x1234);
-            void writer.writeUint16(0xfedc);
+            writer.writeUint16(0x1234);
+            writer.writeUint16(0xfedc);
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([ 0x34, 0x12, 0xdc, 0xfe ]);
         });
         it("writes single unsigned 16 bit value in big endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 3, endianness: Endianness.BIG });
-            void writer.writeUint16(0x1234);
-            void writer.writeUint16(0xfedc);
+            writer.writeUint16(0x1234);
+            writer.writeUint16(0xfedc);
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([ 0x12, 0x34, 0xfe, 0xdc ]);
         });
@@ -188,11 +188,11 @@ describe("DataWriter", () => {
         it("writes single signed 16 bit value in little endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 3, endianness: Endianness.LITTLE });
-            void writer.writeInt16(0);
-            void writer.writeInt16(1);
-            void writer.writeInt16(-1);
-            void writer.writeInt16(32767);
-            void writer.writeInt16(-32768);
+            writer.writeInt16(0);
+            writer.writeInt16(1);
+            writer.writeInt16(-1);
+            writer.writeInt16(32767);
+            writer.writeInt16(-32768);
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([
                 0x00, 0x00,
@@ -205,11 +205,11 @@ describe("DataWriter", () => {
         it("writes single signed 16 bit value in big endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 3, endianness: Endianness.BIG });
-            void writer.writeInt16(0);
-            void writer.writeInt16(1);
-            void writer.writeInt16(-1);
-            void writer.writeInt16(32767);
-            void writer.writeInt16(-32768);
+            writer.writeInt16(0);
+            writer.writeInt16(1);
+            writer.writeInt16(-1);
+            writer.writeInt16(32767);
+            writer.writeInt16(-32768);
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([
                 0x00, 0x00,
@@ -225,8 +225,8 @@ describe("DataWriter", () => {
         it("writes single unsigned 32 bit value in little endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 3, endianness: Endianness.LITTLE });
-            void writer.writeUint32(0x01234567);
-            void writer.writeUint32(0xfedcba98);
+            writer.writeUint32(0x01234567);
+            writer.writeUint32(0xfedcba98);
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([
                 0x67, 0x45, 0x23, 0x01,
@@ -236,8 +236,8 @@ describe("DataWriter", () => {
         it("writes single unsigned 32 bit value in big endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 3, endianness: Endianness.BIG });
-            void writer.writeUint32(0x01234567);
-            void writer.writeUint32(0xfedcba98);
+            writer.writeUint32(0x01234567);
+            writer.writeUint32(0xfedcba98);
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([
                 0x01, 0x23, 0x45, 0x67,
@@ -250,11 +250,11 @@ describe("DataWriter", () => {
         it("writes single signed 32 bit value in little endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 3, endianness: Endianness.LITTLE });
-            void writer.writeInt32(0);
-            void writer.writeInt32(1);
-            void writer.writeInt32(-1);
-            void writer.writeInt32(2147483647);
-            void writer.writeInt32(-2147483648);
+            writer.writeInt32(0);
+            writer.writeInt32(1);
+            writer.writeInt32(-1);
+            writer.writeInt32(2147483647);
+            writer.writeInt32(-2147483648);
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([
                 0x00, 0x00, 0x00, 0x00,
@@ -267,11 +267,11 @@ describe("DataWriter", () => {
         it("writes single signed 32 bit value in big endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 3, endianness: Endianness.BIG });
-            void writer.writeInt32(0);
-            void writer.writeInt32(1);
-            void writer.writeInt32(-1);
-            void writer.writeInt32(2147483647);
-            void writer.writeInt32(-2147483648);
+            writer.writeInt32(0);
+            writer.writeInt32(1);
+            writer.writeInt32(-1);
+            writer.writeInt32(2147483647);
+            writer.writeInt32(-2147483648);
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([
                 0x00, 0x00, 0x00, 0x00,
@@ -287,8 +287,8 @@ describe("DataWriter", () => {
         it("writes single unsigned 64 bit value in little endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 5, endianness: Endianness.LITTLE });
-            void writer.writeBigUint64(0x0123456789abcdefn);
-            void writer.writeBigUint64(0xfedcba9876543210n);
+            writer.writeBigUint64(0x0123456789abcdefn);
+            writer.writeBigUint64(0xfedcba9876543210n);
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([
                 0xef, 0xcd, 0xab, 0x89, 0x67, 0x45, 0x23, 0x01,
@@ -298,8 +298,8 @@ describe("DataWriter", () => {
         it("writes single unsigned 64 bit value in big endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 3, endianness: Endianness.BIG });
-            void writer.writeBigUint64(0x0123456789abcdefn);
-            void writer.writeBigUint64(0xfedcba9876543210n);
+            writer.writeBigUint64(0x0123456789abcdefn);
+            writer.writeBigUint64(0xfedcba9876543210n);
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([
                 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
@@ -312,11 +312,11 @@ describe("DataWriter", () => {
         it("writes single signed 64 bit value in little endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 5, endianness: Endianness.LITTLE });
-            void writer.writeBigInt64(0n);
-            void writer.writeBigInt64(1n);
-            void writer.writeBigInt64(-1n);
-            void writer.writeBigInt64(9223372036854775807n);
-            void writer.writeBigInt64(-9223372036854775808n);
+            writer.writeBigInt64(0n);
+            writer.writeBigInt64(1n);
+            writer.writeBigInt64(-1n);
+            writer.writeBigInt64(9223372036854775807n);
+            writer.writeBigInt64(-9223372036854775808n);
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([
                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -329,11 +329,11 @@ describe("DataWriter", () => {
         it("writes single signed 64 bit value in big endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 7, endianness: Endianness.BIG });
-            void writer.writeBigInt64(0n);
-            void writer.writeBigInt64(1n);
-            void writer.writeBigInt64(-1n);
-            void writer.writeBigInt64(9223372036854775807n);
-            void writer.writeBigInt64(-9223372036854775808n);
+            writer.writeBigInt64(0n);
+            writer.writeBigInt64(1n);
+            writer.writeBigInt64(-1n);
+            writer.writeBigInt64(9223372036854775807n);
+            writer.writeBigInt64(-9223372036854775808n);
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([
                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -349,15 +349,15 @@ describe("DataWriter", () => {
         it("writes unsigned byte array at byte boundary", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 2 });
-            void writer.writeUint8Array(new Uint8Array([ 0x17, 0x8f, 0x4a ]));
+            writer.writeUint8Array(new Uint8Array([ 0x17, 0x8f, 0x4a ]));
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([ 0x17, 0x8f, 0x4a ]);
         });
         it("writes unsigned byte array outside byte boundary", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 2 });
-            void writer.writeBit(1);
-            void writer.writeUint8Array(new Uint8Array([ 0b11001010, 0b10100011 ]));
+            writer.writeBit(1);
+            writer.writeUint8Array(new Uint8Array([ 0b11001010, 0b10100011 ]));
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([ 0b10010101, 0b1000111, 0b1 ]);
         });
@@ -367,15 +367,15 @@ describe("DataWriter", () => {
         it("writes signed byte array at byte boundary", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 2 });
-            void writer.writeInt8Array(new Int8Array([ 0, 1, -1, 127, -128 ]));
+            writer.writeInt8Array(new Int8Array([ 0, 1, -1, 127, -128 ]));
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([ 0x00, 0x01, 0xff, 0x7f, 0x80 ]);
         });
         it("writes signed byte array outside byte boundary", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 2 });
-            void writer.writeBit(1);
-            void writer.writeInt8Array(new Int8Array([ 0, 1, -1, 127, -128 ]));
+            writer.writeBit(1);
+            writer.writeInt8Array(new Int8Array([ 0, 1, -1, 127, -128 ]));
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([
                 0b00000001,
@@ -392,14 +392,14 @@ describe("DataWriter", () => {
         it("writes unsigned 16 bit values in little endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 3, endianness: Endianness.LITTLE });
-            void writer.writeUint16Array(new Uint16Array([ 0x1234, 0xfedc ]));
+            writer.writeUint16Array(new Uint16Array([ 0x1234, 0xfedc ]));
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([ 0x34, 0x12, 0xdc, 0xfe ]);
         });
         it("writes unsigned 16 bit values in big endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 3, endianness: Endianness.BIG });
-            void writer.writeUint16Array(new Uint16Array([ 0x1234, 0xfedc ]));
+            writer.writeUint16Array(new Uint16Array([ 0x1234, 0xfedc ]));
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([ 0x12, 0x34, 0xfe, 0xdc ]);
         });
@@ -409,7 +409,7 @@ describe("DataWriter", () => {
         it("writes signed 16 bit values in little endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 3, endianness: Endianness.LITTLE });
-            void writer.writeInt16Array(new Int16Array([ 0, 1, -1, 32767, -32768 ]));
+            writer.writeInt16Array(new Int16Array([ 0, 1, -1, 32767, -32768 ]));
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([
                 0x00, 0x00,
@@ -422,7 +422,7 @@ describe("DataWriter", () => {
         it("writes signed 16 bit values in big endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 3, endianness: Endianness.BIG });
-            void writer.writeInt16Array(new Int16Array([ 0, 1, -1, 32767, -32768 ]));
+            writer.writeInt16Array(new Int16Array([ 0, 1, -1, 32767, -32768 ]));
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([
                 0x00, 0x00,
@@ -438,7 +438,7 @@ describe("DataWriter", () => {
         it("writes unsigned 32 bit values in little endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 3, endianness: Endianness.LITTLE });
-            void writer.writeUint32Array(new Uint32Array([ 0x01234567, 0xfedcba98 ]));
+            writer.writeUint32Array(new Uint32Array([ 0x01234567, 0xfedcba98 ]));
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([
                 0x67, 0x45, 0x23, 0x01,
@@ -448,7 +448,7 @@ describe("DataWriter", () => {
         it("writes unsigned 32 bit values in big endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 3, endianness: Endianness.BIG });
-            void writer.writeUint32Array(new Uint32Array([ 0x01234567, 0xfedcba98 ]));
+            writer.writeUint32Array(new Uint32Array([ 0x01234567, 0xfedcba98 ]));
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([
                 0x01, 0x23, 0x45, 0x67,
@@ -461,7 +461,7 @@ describe("DataWriter", () => {
         it("writes signed 32 bit values in little endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 3, endianness: Endianness.LITTLE });
-            void writer.writeInt32Array(new Int32Array([ 0, 1, -1, 2147483647, 2147483648 ]));
+            writer.writeInt32Array(new Int32Array([ 0, 1, -1, 2147483647, 2147483648 ]));
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([
                 0x00, 0x00, 0x00, 0x00,
@@ -474,7 +474,7 @@ describe("DataWriter", () => {
         it("writes signed 32 bit values in big endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 3, endianness: Endianness.BIG });
-            void writer.writeInt32Array(new Int32Array([ 0, 1, -1, 2147483647, 2147483648 ]));
+            writer.writeInt32Array(new Int32Array([ 0, 1, -1, 2147483647, 2147483648 ]));
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([
                 0x00, 0x00, 0x00, 0x00,
@@ -490,7 +490,7 @@ describe("DataWriter", () => {
         it("writes unsigned 64 bit values in little endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 5, endianness: Endianness.LITTLE });
-            void writer.writeBigUint64Array(new BigUint64Array([ 0x0123456789abcdefn, 0xfedcba9876543210n ]));
+            writer.writeBigUint64Array(new BigUint64Array([ 0x0123456789abcdefn, 0xfedcba9876543210n ]));
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([
                 0xef, 0xcd, 0xab, 0x89, 0x67, 0x45, 0x23, 0x01,
@@ -500,7 +500,7 @@ describe("DataWriter", () => {
         it("writes unsigned 64 bit values in big endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 3, endianness: Endianness.BIG });
-            void writer.writeBigUint64Array(new BigUint64Array([ 0x0123456789abcdefn, 0xfedcba9876543210n ]));
+            writer.writeBigUint64Array(new BigUint64Array([ 0x0123456789abcdefn, 0xfedcba9876543210n ]));
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([
                 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
@@ -513,7 +513,7 @@ describe("DataWriter", () => {
         it("writes signed 64 bit values in little endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 5, endianness: Endianness.LITTLE });
-            void writer.writeBigInt64Array(new BigInt64Array([ 0n, 1n, -1n, 9223372036854775807n,
+            writer.writeBigInt64Array(new BigInt64Array([ 0n, 1n, -1n, 9223372036854775807n,
                 -9223372036854775808n ]));
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([
@@ -527,7 +527,7 @@ describe("DataWriter", () => {
         it("writes signed 64 bit values in big endian", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 7, endianness: Endianness.BIG });
-            void writer.writeBigInt64Array(new BigInt64Array([ 0n, 1n, -1n, 9223372036854775807n,
+            writer.writeBigInt64Array(new BigInt64Array([ 0n, 1n, -1n, 9223372036854775807n,
                 -9223372036854775808n ]));
             await writer.flush();
             expect(Array.from(sink.getData())).toEqual([
@@ -544,7 +544,7 @@ describe("DataWriter", () => {
         it("writes a string in default encoding", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 3, encoding: "utf-16be" });
-            void writer.writeString("塵も積もれば山となる。");
+            writer.writeString("塵も積もれば山となる。");
             await writer.flush();
             const text = new TextDecoder("utf-16be").decode(sink.getData());
             expect(text).toBe("塵も積もれば山となる。");
@@ -552,7 +552,7 @@ describe("DataWriter", () => {
         it("writes a string in given encoding", async () => {
             const sink = new Uint8ArraySink();
             const writer = new DataWriter(sink, { bufferSize: 3, encoding: "utf-16be" });
-            void writer.writeString("塵も積もれば山となる。", "shift-jis");
+            writer.writeString("塵も積もれば山となる。", "shift-jis");
             await writer.flush();
             const text = new TextDecoder("shift-jis").decode(sink.getData());
             expect(text).toBe("塵も積もれば山となる。");

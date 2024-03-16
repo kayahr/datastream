@@ -4,7 +4,6 @@
  */
 
 import { FileHandle, open } from "fs/promises";
-import { WritableStream } from "web-streams-polyfill/ponyfill";
 
 /**
  * File output stream for Node.js.

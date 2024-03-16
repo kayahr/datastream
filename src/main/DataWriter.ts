@@ -43,6 +43,7 @@ export class DataWriter {
     private written: number = 0;
     private byte: number = 0;
     private bit: number = 0;
+    private writing = Promise.resolve();
 
     /**
      * Creates a new data writer for writing data to the given sink.
@@ -100,17 +101,15 @@ export class DataWriter {
      * Writes all buffered data to the sink. If an incomplete byte is buffered then it is padded with zeroes so the
      * writer points to the beginning of a new byte after flushing.
      */
-    public async flush(): Promise<void> {
+    public flush(): Promise<void> {
         const { byte, bit } = this;
         if (byte > 0 || bit > 0) {
             this.byte = 0;
             this.bit = 0;
             const chunk = new Uint8Array(this.buffer.subarray(0, byte + (bit > 0 ? 1 : 0)));
-            const result = this.sink.write(chunk);
-            if (result != null) {
-                await result;
-            }
+            this.writing = this.writing.then(() => this.sink.write(chunk));
         }
+        return this.writing;
     }
 
     /**
@@ -118,7 +117,7 @@ export class DataWriter {
      *
      * @param value - The bit to write.
      */
-    public async writeBit(value: number): Promise<void> {
+    public writeBit(value: number): void {
         this.buffer[this.byte] = (this.buffer[this.byte] & ((1 << this.bit) - 1)) | ((value & 1) << this.bit);
         this.bit++;
         if (this.bit >= 8) {
@@ -126,7 +125,7 @@ export class DataWriter {
             this.byte++;
             this.written++;
             if (this.byte >= this.bufferSize) {
-                await this.flush();
+                void this.flush();
             }
         }
     }
@@ -136,25 +135,25 @@ export class DataWriter {
      *
      * @param value - The value to write.
      */
-    public async writeUint8(value: number): Promise<void> {
+    public writeUint8(value: number): void {
         if (this.bit === 0) {
             // At byte boundary, whole byte can be written at once
             this.buffer[this.byte] = value;
             this.byte++;
             this.written++;
             if (this.byte >= this.bufferSize) {
-                await this.flush();
+                void this.flush();
             }
         } else {
             // Not at byte boundary, writing each bit separately
-            void this.writeBit(value >> 0 & 1);
-            void this.writeBit(value >> 1 & 1);
-            void this.writeBit(value >> 2 & 1);
-            void this.writeBit(value >> 3 & 1);
-            void this.writeBit(value >> 4 & 1);
-            void this.writeBit(value >> 5 & 1);
-            void this.writeBit(value >> 6 & 1);
-            await this.writeBit(value >> 7 & 1);
+            this.writeBit(value >> 0 & 1);
+            this.writeBit(value >> 1 & 1);
+            this.writeBit(value >> 2 & 1);
+            this.writeBit(value >> 3 & 1);
+            this.writeBit(value >> 4 & 1);
+            this.writeBit(value >> 5 & 1);
+            this.writeBit(value >> 6 & 1);
+            this.writeBit(value >> 7 & 1);
         }
     }
 
@@ -163,8 +162,8 @@ export class DataWriter {
      *
      * @param value - The value to write.
      */
-    public async writeInt8(value: number): Promise<void> {
-        await this.writeUint8(value);
+    public writeInt8(value: number): void {
+        this.writeUint8(value);
     }
 
     /**
@@ -173,13 +172,13 @@ export class DataWriter {
      * @param value      - The value to write.
      * @param endianness - Optional endianness. Defaults to endianness the writer was configured with.
      */
-    public async writeUint16(value: number, endianness: Endianness = this.endianness): Promise<void> {
+    public writeUint16(value: number, endianness: Endianness = this.endianness): void {
         if (endianness === Endianness.LITTLE) {
-            void this.writeUint8(value & 0xff);
-            await this.writeUint8(value >>> 8);
+            this.writeUint8(value & 0xff);
+            this.writeUint8(value >>> 8);
         } else {
-            void this.writeUint8(value >>> 8);
-            await this.writeUint8(value & 0xff);
+            this.writeUint8(value >>> 8);
+            this.writeUint8(value & 0xff);
         }
     }
 
@@ -189,8 +188,8 @@ export class DataWriter {
      * @param value      - The value to write.
      * @param endianness - Optional endianness. Defaults to endianness the writer was configured with.
      */
-    public async writeInt16(value: number, endianness: Endianness = this.endianness): Promise<void> {
-        await this.writeUint16(value, endianness);
+    public writeInt16(value: number, endianness: Endianness = this.endianness): void {
+        this.writeUint16(value, endianness);
     }
 
     /**
@@ -199,13 +198,13 @@ export class DataWriter {
      * @param value      - The value to write.
      * @param endianness - Optional endianness. Defaults to endianness the writer was configured with.
      */
-    public async writeUint32(value: number, endianness: Endianness = this.endianness): Promise<void> {
+    public writeUint32(value: number, endianness: Endianness = this.endianness): void {
         if (endianness === Endianness.LITTLE) {
-            void this.writeUint16(value & 0xffff, endianness);
-            await this.writeUint16(value >>> 16, endianness);
+            this.writeUint16(value & 0xffff, endianness);
+            this.writeUint16(value >>> 16, endianness);
         } else {
-            void this.writeUint16(value >>> 16, endianness);
-            await this.writeUint16(value & 0xffff, endianness);
+            this.writeUint16(value >>> 16, endianness);
+            this.writeUint16(value & 0xffff, endianness);
         }
     }
 
@@ -215,8 +214,8 @@ export class DataWriter {
      * @param value      - The value to write.
      * @param endianness - Optional endianness. Defaults to endianness the writer was configured with.
      */
-    public async writeInt32(value: number, endianness: Endianness = this.endianness): Promise<void> {
-        await this.writeUint32(value, endianness);
+    public writeInt32(value: number, endianness: Endianness = this.endianness): void {
+        this.writeUint32(value, endianness);
     }
 
     /**
@@ -225,13 +224,13 @@ export class DataWriter {
      * @param value      - The value to write.
      * @param endianness - Optional endianness. Defaults to endianness the writer was configured with.
      */
-    public async writeBigUint64(value: bigint, endianness: Endianness = this.endianness): Promise<void> {
+    public writeBigUint64(value: bigint, endianness: Endianness = this.endianness): void {
         if (endianness === Endianness.LITTLE) {
-            void this.writeUint32(Number(value & BigInt(0xffffffff)), endianness);
-            await this.writeUint32(Number(value >> BigInt(32)), endianness);
+            this.writeUint32(Number(value & BigInt(0xffffffff)), endianness);
+            this.writeUint32(Number(value >> BigInt(32)), endianness);
         } else {
-            void this.writeUint32(Number(value >> BigInt(32)), endianness);
-            await this.writeUint32(Number(value & BigInt(0xffffffff)), endianness);
+            this.writeUint32(Number(value >> BigInt(32)), endianness);
+            this.writeUint32(Number(value & BigInt(0xffffffff)), endianness);
         }
     }
 
@@ -241,8 +240,8 @@ export class DataWriter {
      * @param value      - The value to write.
      * @param endianness - Optional endianness. Defaults to endianness the writer was configured with.
      */
-    public async writeBigInt64(value: bigint, endianness: Endianness = this.endianness): Promise<void> {
-        await this.writeBigUint64(value, endianness);
+    public writeBigInt64(value: bigint, endianness: Endianness = this.endianness): void {
+        this.writeBigUint64(value, endianness);
     }
 
     /**
@@ -250,9 +249,8 @@ export class DataWriter {
      *
      * @param values - The values to write.
      */
-    public async writeUint8Array(values: Uint8Array | Uint8ClampedArray): Promise<void> {
+    public writeUint8Array(values: Uint8Array | Uint8ClampedArray): void {
         const len = values.length;
-        let lastPromise: Promise<void> | null = null;
         if (this.bit === 0) {
             let start = 0;
             while (start < len) {
@@ -263,16 +261,13 @@ export class DataWriter {
                 this.byte += chunk.length;
                 this.written += chunk.length;
                 if (this.byte >= this.bufferSize) {
-                    lastPromise = this.flush();
+                    void this.flush();
                 }
             }
         } else {
             for (const value of values) {
-                lastPromise = this.writeUint8(value);
+                this.writeUint8(value);
             }
-        }
-        if (lastPromise != null) {
-            await lastPromise;
         }
     }
 
@@ -281,9 +276,8 @@ export class DataWriter {
      *
      * @param values - The values to write.
      */
-    public async writeInt8Array(values: Int8Array): Promise<void> {
+    public writeInt8Array(values: Int8Array): void {
         const len = values.length;
-        let lastPromise: Promise<void> | null = null;
         if (this.bit === 0) {
             let start = 0;
             while (start < len) {
@@ -294,16 +288,13 @@ export class DataWriter {
                 this.byte += chunk.length;
                 this.written += chunk.length;
                 if (this.byte >= this.bufferSize) {
-                    lastPromise = this.flush();
+                    void this.flush();
                 }
             }
         } else {
             for (const value of values) {
-                lastPromise = this.writeInt8(value);
+                this.writeInt8(value);
             }
-        }
-        if (lastPromise != null) {
-            await lastPromise;
         }
     }
 
@@ -313,17 +304,12 @@ export class DataWriter {
      * @param values     - The values to write.
      * @param endianness - Optional endianness. Defaults to endianness the writer was configured with.
      */
-    public async writeUint16Array(values: Uint16Array, endianness: Endianness = this.endianness):
-            Promise<void> {
+    public writeUint16Array(values: Uint16Array, endianness: Endianness = this.endianness): void {
         if (endianness === getNativeEndianness()) {
-            await this.writeUint8Array(new Uint8Array(values.buffer, values.byteOffset, values.byteLength));
+            this.writeUint8Array(new Uint8Array(values.buffer, values.byteOffset, values.byteLength));
         } else {
-            let lastPromise: Promise<void> | null = null;
             for (const value of values) {
-                lastPromise = this.writeUint16(value, endianness);
-            }
-            if (lastPromise != null) {
-                await lastPromise;
+                this.writeUint16(value, endianness);
             }
         }
     }
@@ -334,17 +320,12 @@ export class DataWriter {
      * @param values     - The values to write.
      * @param endianness - Optional endianness. Defaults to endianness the writer was configured with.
      */
-    public async writeInt16Array(values: Int16Array, endianness: Endianness = this.endianness):
-            Promise<void> {
+    public writeInt16Array(values: Int16Array, endianness: Endianness = this.endianness): void {
         if (endianness === getNativeEndianness()) {
-            await this.writeUint8Array(new Uint8Array(values.buffer, values.byteOffset, values.byteLength));
+            this.writeUint8Array(new Uint8Array(values.buffer, values.byteOffset, values.byteLength));
         } else {
-            let lastPromise: Promise<void> | null = null;
             for (const value of values) {
-                lastPromise = this.writeInt16(value, endianness);
-            }
-            if (lastPromise != null) {
-                await lastPromise;
+                this.writeInt16(value, endianness);
             }
         }
     }
@@ -355,17 +336,12 @@ export class DataWriter {
      * @param values     - The values to write.
      * @param endianness - Optional endianness. Defaults to endianness the writer was configured with.
      */
-    public async writeUint32Array(values: Uint32Array, endianness: Endianness = this.endianness):
-            Promise<void> {
+    public writeUint32Array(values: Uint32Array, endianness: Endianness = this.endianness): void {
         if (endianness === getNativeEndianness()) {
-            await this.writeUint8Array(new Uint8Array(values.buffer, values.byteOffset, values.byteLength));
+            this.writeUint8Array(new Uint8Array(values.buffer, values.byteOffset, values.byteLength));
         } else {
-            let lastPromise: Promise<void> | null = null;
             for (const value of values) {
-                lastPromise = this.writeUint32(value, endianness);
-            }
-            if (lastPromise != null) {
-                await lastPromise;
+                this.writeUint32(value, endianness);
             }
         }
     }
@@ -376,17 +352,12 @@ export class DataWriter {
      * @param values     - The values to write.
      * @param endianness - Optional endianness. Defaults to endianness the writer was configured with.
      */
-    public async writeInt32Array(values: Int32Array, endianness: Endianness = this.endianness):
-            Promise<void> {
+    public writeInt32Array(values: Int32Array, endianness: Endianness = this.endianness): void {
         if (endianness === getNativeEndianness()) {
-            await this.writeUint8Array(new Uint8Array(values.buffer, values.byteOffset, values.byteLength));
+            this.writeUint8Array(new Uint8Array(values.buffer, values.byteOffset, values.byteLength));
         } else {
-            let lastPromise: Promise<void> | null = null;
             for (const value of values) {
-                lastPromise = this.writeInt32(value, endianness);
-            }
-            if (lastPromise != null) {
-                await lastPromise;
+                this.writeInt32(value, endianness);
             }
         }
     }
@@ -397,16 +368,12 @@ export class DataWriter {
      * @param values     - The values to write.
      * @param endianness - Optional endianness. Defaults to endianness the writer was configured with.
      */
-    public async writeBigUint64Array(values: BigUint64Array, endianness: Endianness = this.endianness): Promise<void> {
+    public writeBigUint64Array(values: BigUint64Array, endianness: Endianness = this.endianness): void {
         if (endianness === getNativeEndianness()) {
-            await this.writeUint8Array(new Uint8Array(values.buffer, values.byteOffset, values.byteLength));
+            this.writeUint8Array(new Uint8Array(values.buffer, values.byteOffset, values.byteLength));
         } else {
-            let lastPromise: Promise<void> | null = null;
             for (const value of values) {
-                lastPromise = this.writeBigUint64(value, endianness);
-            }
-            if (lastPromise != null) {
-                await lastPromise;
+                this.writeBigUint64(value, endianness);
             }
         }
     }
@@ -417,16 +384,12 @@ export class DataWriter {
      * @param values     - The values to write.
      * @param endianness - Optional endianness. Defaults to endianness the writer was configured with.
      */
-    public async writeBigInt64Array(values: BigInt64Array, endianness: Endianness = this.endianness): Promise<void> {
+    public writeBigInt64Array(values: BigInt64Array, endianness: Endianness = this.endianness): void {
         if (endianness === getNativeEndianness()) {
-            await this.writeUint8Array(new Uint8Array(values.buffer, values.byteOffset, values.byteLength));
+            this.writeUint8Array(new Uint8Array(values.buffer, values.byteOffset, values.byteLength));
         } else {
-            let lastPromise: Promise<void> | null = null;
             for (const value of values) {
-                lastPromise = this.writeBigInt64(value, endianness);
-            }
-            if (lastPromise != null) {
-                await lastPromise;
+                this.writeBigInt64(value, endianness);
             }
         }
     }
@@ -437,8 +400,8 @@ export class DataWriter {
      * @param text     - The text to write.
      * @param encoding - The encoding. Defaults to encoding the writer was configured with.
      */
-    public async writeString(text: string, encoding = this.encoding): Promise<void> {
-        return this.writeUint8Array(createTextEncoder(encoding).encode(text));
+    public writeString(text: string, encoding = this.encoding): void {
+        this.writeUint8Array(createTextEncoder(encoding).encode(text));
     }
 }
 
