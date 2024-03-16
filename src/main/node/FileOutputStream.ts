@@ -8,7 +8,7 @@ import { FileHandle, open } from "fs/promises";
 /**
  * File output stream for Node.js.
  */
-export class FileOutputStream extends WritableStream<Uint8Array> {
+export class FileOutputStream extends WritableStream<Uint8Array> implements AsyncDisposable {
     /**
      * Creates a new file output stream writing to the given file.
      *
@@ -29,5 +29,10 @@ export class FileOutputStream extends WritableStream<Uint8Array> {
                 await fd.close();
             }
         });
+    }
+
+    /** @inheritDoc */
+    public [Symbol.asyncDispose](): PromiseLike<void> {
+        return this.close();
     }
 }

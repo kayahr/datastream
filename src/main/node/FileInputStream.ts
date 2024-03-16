@@ -8,7 +8,7 @@ import { FileHandle, open } from "fs/promises";
 /**
  * File input stream for Node.js.
  */
-export class FileInputStream extends ReadableStream<Uint8Array> {
+export class FileInputStream extends ReadableStream<Uint8Array> implements AsyncDisposable {
     /** The open file handle. Null if not yet opened. */
     private file: FileHandle | null;
 
@@ -54,5 +54,10 @@ export class FileInputStream extends ReadableStream<Uint8Array> {
             await this.file.close();
             this.file = null;
         }
+    }
+
+    /** @inheritDoc */
+    public [Symbol.asyncDispose](): PromiseLike<void> {
+        return this.close();
     }
 }

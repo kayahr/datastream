@@ -30,4 +30,13 @@ describe("FileInputStream", () => {
     it("can read bytes from given file with custom chunk size (500)", async () => {
         await testStream(new FileInputStream(resolve(__dirname, `../../../src/test/data/iliad_utf-8.txt`), 500), 500);
     });
+
+    it("is disposable", async () => {
+        let spy: jest.SpyInstance | null = null;
+        if (spy == null /* Always true, just here to create a block on which end the stream is disposed */) {
+            await using stream = new FileInputStream(resolve(__dirname, `../../../src/test/data/iliad_utf-8.txt`));
+            spy = jest.spyOn(stream, "close");
+        }
+        expect(spy).toHaveBeenCalledTimes(1);
+    });
 });

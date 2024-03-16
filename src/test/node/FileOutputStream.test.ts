@@ -25,4 +25,16 @@ describe("FileOutputStream", () => {
             await rm(tmpFile);
         }
     });
+
+    it("is disposable", async () => {
+        let spy: jest.SpyInstance;
+        const tmpFile = await tmpName();
+        try {
+            await using stream = new FileOutputStream(tmpFile);
+            spy = jest.spyOn(stream, "close");
+        } finally {
+            await rm(tmpFile);
+        }
+        expect(spy).toHaveBeenCalledTimes(1);
+    });
 });

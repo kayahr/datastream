@@ -16,7 +16,7 @@
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
         "strict": true,
-        "strictPropertyInitialization": false,
+        "strictPropertyInitialization": true,
         "noUnusedLocals": true,
         "noUnusedParameters": false,
         "skipLibCheck": true,
