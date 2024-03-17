@@ -1,4 +1,4 @@
-import { Uint8ArraySink } from "../main/Uint8ArraySink";
+import { Uint8ArraySink } from "../main/sinks/Uint8ArraySink";
 
 describe("Uint8ArraySink", () => {
     describe("capacity", () => {

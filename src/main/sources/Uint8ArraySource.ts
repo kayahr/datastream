@@ -3,7 +3,7 @@
  * See LICENSE.md for licensing information
  */
 
-import { DataReaderSource } from "./DataReaderSource";
+import { DataReaderSource } from "../DataReaderSource";
 
 /**
  * Source which reads from a Uint8Array.

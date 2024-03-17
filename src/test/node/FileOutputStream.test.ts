@@ -2,7 +2,7 @@ import { readFile, rm } from "node:fs/promises";
 
 import { tmpName } from "tmp-promise";
 
-import { FileOutputStream } from "../../main/node/FileOutputStream";
+import { FileOutputStream } from "../../node/streams/FileOutputStream";
 
 describe("FileOutputStream", () => {
     it("can write bytes to given file", async () => {

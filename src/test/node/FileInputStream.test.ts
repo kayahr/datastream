@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 
-import { FileInputStream } from "../../main/node/FileInputStream";
+import { FileInputStream } from "../../node/streams/FileInputStream";
 
 describe("FileInputStream", () => {
     async function testStream(stream: FileInputStream, chunkSize = 8192): Promise<void> {

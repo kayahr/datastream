@@ -6,8 +6,8 @@ import { tmpName } from "tmp-promise";
 
 import { DataWriter, writeDataToStream } from "../main/DataWriter";
 import { Endianness, getNativeEndianness } from "../main/Endianness";
-import { FileOutputStream } from "../main/node/FileOutputStream";
-import { Uint8ArraySink } from "../main/Uint8ArraySink";
+import { Uint8ArraySink } from "../main/sinks/Uint8ArraySink";
+import { FileOutputStream } from "../node/streams/FileOutputStream";
 
 describe("DataWriter", () => {
     it("can write to a file", async () => {

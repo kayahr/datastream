@@ -5,7 +5,7 @@
 
 import { DataReaderSource } from "./DataReaderSource";
 import { Endianness, getNativeEndianness, swap16, swap32, swap64 } from "./Endianness";
-import { Uint8ArraySink } from "./Uint8ArraySink";
+import { Uint8ArraySink } from "./sinks/Uint8ArraySink";
 
 /**
  * Options for constructing a data reader.

@@ -5,7 +5,7 @@ import { createTextEncoder } from "@kayahr/text-encoding";
 import { DataReader, readDataFromStream } from "../main/DataReader";
 import { DataReaderSource } from "../main/DataReaderSource";
 import { Endianness, getNativeEndianness } from "../main/Endianness";
-import { FileInputStream } from "../main/node/FileInputStream";
+import { FileInputStream } from "../node/streams/FileInputStream";
 
 class MockDataReaderSource implements DataReaderSource {
     public readonly data: number[];
