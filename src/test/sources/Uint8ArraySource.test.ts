@@ -1,4 +1,4 @@
-import { Uint8ArraySource } from "../main/sources/Uint8ArraySource";
+import { Uint8ArraySource } from "../../main/sources/Uint8ArraySource";
 
 describe("Uint8ArraySource", () => {
     it("reads from the given array", () => {

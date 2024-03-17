@@ -21,19 +21,17 @@
     },
     "files": [
         "lib/main/",
-        "src/main/",
-        "lib/node/",
-        "src/node/"
+        "src/main/"
     ],
     "exports": {
-        ".": "./lib/main/index.js",
-        "./node": "./lib/node/index.js"
+        ".": "./lib/main/core.js",
+        "./node": "./lib/node/node.js"
     },
-    "types": "lib/main/index.d.ts",
+    "types": "lib/main/core.d.ts",
     "typesVersions": {
         "*": {
             "node": [
-                "lib/node/index.d.ts"
+                "lib/node/node.d.ts"
             ]
         }
     },

@@ -1,6 +1,6 @@
-import * as node from "../../node";
-import { FileInputStream } from "../../node/streams/FileInputStream";
-import { FileOutputStream } from "../../node/streams/FileOutputStream";
+import * as node from "../main/node";
+import { FileInputStream } from "../main/streams/FileInputStream";
+import { FileOutputStream } from "../main/streams/FileOutputStream";
 
 describe("index", () => {
     it("exports relevant types and functions", () => {

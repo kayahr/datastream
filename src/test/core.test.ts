@@ -1,4 +1,4 @@
-import * as datastream from "../main";
+import * as datastream from "../main/core";
 import { DataReader, readDataFromStream } from "../main/DataReader";
 import { DataWriter, writeDataToStream } from "../main/DataWriter";
 import { Endianness, getNativeEndianness, swap16, swap32, swap64 } from "../main/Endianness";
