@@ -86,8 +86,7 @@ export class DataReader {
      *
      * @param source - The source to read from.
      */
-    public constructor(source: DataReaderSource, { endianness = getNativeEndianness(), encoding = "utf-8" }:
-            DataReaderOptions = {}) {
+    public constructor(source: DataReaderSource, { endianness = getNativeEndianness(), encoding = "utf-8" }: DataReaderOptions = {}) {
         this.source = source;
         this.endianness = endianness;
         this.encoding = encoding;
@@ -183,7 +182,7 @@ export class DataReader {
      * number of bits.
      *
      * @param bits - The number of bits to skip.
-     * @return The actual number of skipped bits. Will be lower than given number if end of stream has been reached.
+     * @returns The actual number of skipped bits. Will be lower than given number if end of stream has been reached.
      */
     public async skipBits(bits: number): Promise<number> {
         let skipped = 0;
@@ -248,8 +247,8 @@ export class DataReader {
      * Actually this is the same as calling {@link skipBits} with the number of bytes converted to the number of bits.
      *
      * @param bytes - The number of bytes to skip.
-     * @return The actual number of fully skipped bytes (not counting partially skipped bytes). Will be lower than
-     *         given number if end of stream has been reached.
+     * @returns The actual number of fully skipped bytes (not counting partially skipped bytes). Will be lower than
+     *          given number if end of stream has been reached.
      */
     public async skipBytes(bytes: number): Promise<number> {
         return Math.floor(await this.skipBits(bytes * 8) / 8);
@@ -266,8 +265,7 @@ export class DataReader {
      *
      * @param operation - The look-ahead operation to perform.
      */
-    public async lookAhead<T>(operation: (commit: (values?: number, bitsPerValue?: number) => void) => Promise<T>):
-            Promise<T> {
+    public async lookAhead<T>(operation: (commit: (values?: number, bitsPerValue?: number) => void) => Promise<T>): Promise<T> {
         const origByte = this.byte;
         const origBit = this.bit;
         const origReadBytes = this.bytesRead;
@@ -501,8 +499,7 @@ export class DataReader {
      * @param size   - Number of bytes to read. Defaults to buffer size minus offset.
      * @returns the number of read bytes. 0 when end of stream is reached or 0 bytes were requested to read.
      */
-    public async readUint8Array(buffer: Uint8Array | Uint8ClampedArray, offset = 0, size = buffer.length - offset):
-            Promise<number> {
+    public async readUint8Array(buffer: Uint8Array | Uint8ClampedArray, offset = 0, size = buffer.length - offset): Promise<number> {
         let read = 0;
         if (this.bit === 0) {
             // At byte boundary, whole byte buffers can be read at once
@@ -700,8 +697,7 @@ export class DataReader {
      *          array is volatile because it is reused so process the data immediately before calling other methods
      *          on the reader.
      */
-    private async readUntil(stopValue: number, initialCapacity?: number, maxBytes?: number, includeStopValue = false):
-            Promise<Uint8ArraySink | null> {
+    private async readUntil(stopValue: number, initialCapacity?: number, maxBytes?: number, includeStopValue = false): Promise<Uint8ArraySink | null> {
         const sink = this.getSink(initialCapacity);
         let read = 0;
         let end = false;
@@ -853,8 +849,7 @@ export class DataReader {
      *
      * @returns the read line. Null when end of stream is reached.
      */
-    public async readLine({ includeEOL = false, initialCapacity, maxBytes, encoding = this.encoding }:
-            ReadLineOptions = {}): Promise<string | null> {
+    public async readLine({ includeEOL = false, initialCapacity, maxBytes, encoding = this.encoding }: ReadLineOptions = {}): Promise<string | null> {
         let result: Uint8ArraySink | null;
         encoding = encoding.toLowerCase();
         const utf16 = encoding.startsWith("utf-16");
