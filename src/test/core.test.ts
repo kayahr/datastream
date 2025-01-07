@@ -1,13 +1,15 @@
-import * as datastream from "../main/core";
-import { DataReader, readDataFromStream } from "../main/DataReader";
-import { DataWriter, writeDataToStream } from "../main/DataWriter";
-import { Endianness, getNativeEndianness, swap16, swap32, swap64 } from "../main/Endianness";
-import { Uint8ArraySink } from "../main/sinks/Uint8ArraySink";
-import { Uint8ArraySource } from "../main/sources/Uint8ArraySource";
+import { describe, expect, it } from "vitest";
 
-describe("index", () => {
+import * as exports from "../main/core.js";
+import { DataReader, readDataFromStream } from "../main/DataReader.js";
+import { DataWriter, writeDataToStream } from "../main/DataWriter.js";
+import { Endianness, getNativeEndianness, swap16, swap32, swap64 } from "../main/Endianness.js";
+import { Uint8ArraySink } from "../main/sinks/Uint8ArraySink.js";
+import { Uint8ArraySource } from "../main/sources/Uint8ArraySource.js";
+
+describe("core", () => {
     it("exports relevant types and functions", () => {
-        expect(datastream).toEqual({
+        expect({ ...exports }).toEqual({
             DataReader,
             readDataFromStream,
             DataWriter,

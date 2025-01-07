@@ -3,9 +3,9 @@
  * See LICENSE.md for licensing information
  */
 
-import { DataReaderSource } from "./DataReaderSource";
-import { Endianness, getNativeEndianness, swap16, swap32, swap64 } from "./Endianness";
-import { Uint8ArraySink } from "./sinks/Uint8ArraySink";
+import { DataReaderSource } from "./DataReaderSource.js";
+import { Endianness, getNativeEndianness, swap16, swap32, swap64 } from "./Endianness.js";
+import { Uint8ArraySink } from "./sinks/Uint8ArraySink.js";
 
 /**
  * Options for constructing a data reader.
@@ -18,6 +18,9 @@ export interface DataReaderOptions {
     encoding?: string;
 }
 
+/**
+ * Options for {@link DataReader.readNullTerminatedString} method.
+ */
 export interface ReadStringOptions {
     /** The text encoding. Defaults to encoding the reader was configured with. */
     encoding?: string;
@@ -34,6 +37,9 @@ export interface ReadStringOptions {
 
 }
 
+/**
+ * Options for {@link DataReader.readLine} method.
+ */
 export interface ReadLineOptions extends ReadStringOptions {
     /** True to include EOL marker in returned line. Defaults to false. */
     includeEOL?: boolean;
@@ -47,7 +53,7 @@ export interface ReadArrayOptions {
     offset?: number;
 
     /** Optional number of bytes to read. Defaults to buffer size minus offset. */
-    size?: number
+    size?: number;
 }
 
 /**
@@ -55,7 +61,7 @@ export interface ReadArrayOptions {
  */
 export interface ReadMultiByteArrayOptions extends ReadArrayOptions {
     /** Optional endianness. Defaults to endianness the reader was configured with. */
-    endianness?: Endianness
+    endianness?: Endianness;
 }
 
 /**
@@ -796,7 +802,7 @@ export class DataReader {
             includeStopValue = false): Promise<Uint8ArraySink | null> {
         const sink = this.getSink(initialCapacity);
         let read = 0;
-        while(maxBytes == null || read < maxBytes) {
+        while (maxBytes == null || read < maxBytes) {
             const value = await this.readUint16(bigEndian ? Endianness.BIG : Endianness.LITTLE);
             if (value == null) {
                 if (read === 0) {

@@ -5,8 +5,8 @@
 
 import { createTextEncoder } from "@kayahr/text-encoding/no-encodings";
 
-import { DataWriterSink } from "./DataWriterSink";
-import { Endianness, getNativeEndianness } from "./Endianness";
+import { DataWriterSink } from "./DataWriterSink.js";
+import { Endianness, getNativeEndianness } from "./Endianness.js";
 
 /** The default buffer size (64KB). */
 const DEFAULT_BUFFER_SIZE = 65536;

@@ -1,4 +1,6 @@
-import { Uint8ArraySink } from "../../main/sinks/Uint8ArraySink";
+import { describe, expect, it } from "vitest";
+
+import { Uint8ArraySink } from "../../main/sinks/Uint8ArraySink.js";
 
 describe("Uint8ArraySink", () => {
     describe("capacity", () => {

@@ -3,7 +3,7 @@
  * See LICENSE.md for licensing information
  */
 
-import { DataReaderSource } from "../DataReaderSource";
+import { DataReaderSource } from "../DataReaderSource.js";
 
 /**
  * Source which reads from a Uint8Array.

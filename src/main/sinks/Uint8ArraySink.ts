@@ -3,7 +3,7 @@
  * See LICENSE.md for licensing information
  */
 
-import { DataWriterSink } from "../DataWriterSink";
+import { DataWriterSink } from "../DataWriterSink.js";
 
 /**
  * Sink which writes into a growing Uint8Array.

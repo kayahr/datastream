@@ -1,27 +1,28 @@
 {
     "$schema": "http://json.schemastore.org/tsconfig",
     "compilerOptions": {
-        "target": "es2021",
-        "lib": [ "es2021", "dom" ],
-        "moduleResolution": "node",
-        "module": "commonjs",
-        "rootDir": "src",
-        "outDir": "lib",
+        "declaration": true,
+        "forceConsistentCasingInFileNames": true,
+        "lib": [
+            "ES2022",
+            "DOM"
+        ],
+        "module": "NodeNext",
+        "newLine": "lf",
+        "noEmitOnError": false,
+        "noFallthroughCasesInSwitch": true,
         "noImplicitAny": true,
         "noImplicitOverride": true,
         "noImplicitReturns": true,
         "noImplicitThis": true,
-        "sourceMap": true,
-        "declaration": true,
-        "experimentalDecorators": true,
-        "emitDecoratorMetadata": true,
-        "strict": true,
-        "strictPropertyInitialization": true,
         "noUnusedLocals": true,
         "noUnusedParameters": false,
+        "outDir": "./lib",
+        "preserveSymlinks": true,
+        "rootDir": "./src",
         "skipLibCheck": true,
-        "importHelpers": true,
-        "downlevelIteration": true,
-        "preserveSymlinks": true
+        "sourceMap": true,
+        "strict": true,
+        "target": "ES2022"
     }
 }

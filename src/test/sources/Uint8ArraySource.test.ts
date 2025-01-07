@@ -1,4 +1,6 @@
-import { Uint8ArraySource } from "../../main/sources/Uint8ArraySource";
+import { describe, expect, it } from "vitest";
+
+import { Uint8ArraySource } from "../../main/sources/Uint8ArraySource.js";
 
 describe("Uint8ArraySource", () => {
     it("reads from the given array", () => {

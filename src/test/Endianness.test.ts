@@ -1,17 +1,20 @@
-import * as os from "os";
+import { describe, expect, it } from "vitest";
 
-import { Endianness, getNativeEndianness, swap16, swap32, swap64 } from "../main/Endianness";
+import { Endianness, getNativeEndianness, swap16, swap32, swap64 } from "../main/Endianness.js";
 
 describe("Endianness", () => {
-    describe("getNative", () => {
-        it("returns the native endianness", () => {
-            if (os.endianness() === "LE") {
-                expect(getNativeEndianness()).toBe(Endianness.LITTLE);
-            } else {
-                expect(getNativeEndianness()).toBe(Endianness.BIG);
-            }
+    if (typeof window === "undefined") {
+        describe("getNative", () => {
+            it("returns the native endianness", async () => {
+                const { endianness } = await import("node:os");
+                if (endianness() === "LE") {
+                    expect(getNativeEndianness()).toBe(Endianness.LITTLE);
+                } else {
+                    expect(getNativeEndianness()).toBe(Endianness.BIG);
+                }
+            });
         });
-    });
+    }
 
     describe("swap16", () => {
         it("swaps 16 bit endianness", () => {

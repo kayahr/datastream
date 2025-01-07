@@ -1,32 +1,34 @@
 import "@kayahr/text-encoding/encodings";
 
-import { readFile, rm } from "node:fs/promises";
+import { describe, expect, it } from "vitest";
 
-import { tmpName } from "tmp-promise";
-
-import { DataWriter, writeDataToStream } from "../main/DataWriter";
-import { Endianness, getNativeEndianness } from "../main/Endianness";
-import { Uint8ArraySink } from "../main/sinks/Uint8ArraySink";
-import { FileOutputStream } from "../main/streams/FileOutputStream";
+import { DataWriter, writeDataToStream } from "../main/DataWriter.js";
+import { Endianness, getNativeEndianness } from "../main/Endianness.js";
+import { Uint8ArraySink } from "../main/sinks/Uint8ArraySink.js";
 
 describe("DataWriter", () => {
-    it("can write to a file", async () => {
-        const tmpFile = await tmpName();
-        try {
-            const stream = new FileOutputStream(tmpFile);
+    if (typeof window === "undefined") {
+        it("can write to a file", async () => {
+            const { readFile, rm } = await import("node:fs/promises");
+            const { tmpName } = await import("tmp-promise");
+            const { FileOutputStream } = await import("../main/streams/FileOutputStream.js");
+            const tmpFile = await tmpName();
             try {
-                await writeDataToStream(stream, async writer => {
-                    writer.writeString("Test text");
-                    await writer.flush();
-                });
+                const stream = new FileOutputStream(tmpFile);
+                try {
+                    await writeDataToStream(stream, async writer => {
+                        writer.writeString("Test text");
+                        await writer.flush();
+                    });
+                } finally {
+                    await stream.close();
+                }
+                expect(await readFile(tmpFile, { encoding: "utf-8" })).toBe("Test text");
             } finally {
-                await stream.close();
+                await rm(tmpFile);
             }
-            expect(await readFile(tmpFile, { encoding: "utf-8" })).toBe("Test text");
-        } finally {
-            await rm(tmpFile);
-        }
-    });
+        });
+    }
 
     describe("endianness", () => {
         it("defaults to native endianness", () => {

@@ -1,6 +1,8 @@
 import { resolve } from "node:path";
 
-import { FileInputStream } from "../../main/streams/FileInputStream";
+import { describe, expect, it, type MockInstance, vi } from "vitest";
+
+import { FileInputStream } from "../../main/streams/FileInputStream.js";
 
 describe("FileInputStream", () => {
     async function testStream(stream: FileInputStream, chunkSize = 8192): Promise<void> {
@@ -32,10 +34,10 @@ describe("FileInputStream", () => {
     });
 
     it("is disposable", async () => {
-        let spy: jest.SpyInstance | null = null;
+        let spy: MockInstance | null = null;
         if (spy == null /* Always true, just here to create a block on which end the stream is disposed */) {
             await using stream = new FileInputStream(resolve(__dirname, `../../../src/test/data/iliad_utf-8.txt`));
-            spy = jest.spyOn(stream, "close");
+            spy = vi.spyOn(stream, "close");
         }
         expect(spy).toHaveBeenCalledTimes(1);
     });

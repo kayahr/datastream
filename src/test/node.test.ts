@@ -1,10 +1,12 @@
-import * as node from "../main/node";
-import { FileInputStream } from "../main/streams/FileInputStream";
-import { FileOutputStream } from "../main/streams/FileOutputStream";
+import { describe, expect, it } from "vitest";
 
-describe("index", () => {
+import * as exports from "../main/node.js";
+import { FileInputStream } from "../main/streams/FileInputStream.js";
+import { FileOutputStream } from "../main/streams/FileOutputStream.js";
+
+describe("node", () => {
     it("exports relevant types and functions", () => {
-        expect(node).toEqual({
+        expect({ ...exports }).toEqual({
             FileInputStream,
             FileOutputStream
         });

@@ -1,8 +1,9 @@
 import { readFile, rm } from "node:fs/promises";
 
 import { tmpName } from "tmp-promise";
+import { describe, expect, it, type MockInstance, vi } from "vitest";
 
-import { FileOutputStream } from "../../main/streams/FileOutputStream";
+import { FileOutputStream } from "../../main/streams/FileOutputStream.js";
 
 describe("FileOutputStream", () => {
     it("can write bytes to given file", async () => {
@@ -27,11 +28,11 @@ describe("FileOutputStream", () => {
     });
 
     it("is disposable", async () => {
-        let spy: jest.SpyInstance;
+        let spy: MockInstance;
         const tmpFile = await tmpName();
         try {
             await using stream = new FileOutputStream(tmpFile);
-            spy = jest.spyOn(stream, "close");
+            spy = vi.spyOn(stream, "close");
         } finally {
             await rm(tmpFile);
         }
