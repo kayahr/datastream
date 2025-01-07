@@ -74,7 +74,7 @@
         "@kayahr/jest-electron-runner": "29.11.0",
         "@types/jest": "29.5.12",
         "@typescript-eslint/eslint-plugin": "7.2.0",
-        "@typescript-eslint/parser": "7.2.0",
+        "@typescript-eslint/parser": "7.18.0",
         "cspell": "8.6.0",
         "eslint": "8.57.0",
         "eslint-plugin-deprecation": "2.0.0",
