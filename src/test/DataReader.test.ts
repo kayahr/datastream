@@ -1,6 +1,9 @@
 import { createTextEncoder } from "@kayahr/text-encoding";
+import { isNodeJS, readFile } from "@kayahr/vitest-matchers";
+import { toByteArray } from "base64-js";
 import { describe, expect, it } from "vitest";
 
+import { Uint8ArraySource } from "../main/core.js";
 import { DataReader, readDataFromStream } from "../main/DataReader.js";
 import { DataReaderSource } from "../main/DataReaderSource.js";
 import { Endianness, getNativeEndianness } from "../main/Endianness.js";
@@ -683,31 +686,22 @@ describe("DataReader", () => {
                     expect(await reader.readLine({ encoding })).toBe("Foo\0Bar");
                     expect(await reader.readLine({ encoding })).toBeNull();
                 });
-                if (typeof window === "undefined") {
-                    it(`can read Iliad`, async () => {
-                        const { FileInputStream } = await import("../main/streams/FileInputStream.js");
-                        const { resolve } = await import("node:path");
-                        const stream = new FileInputStream(resolve(__dirname, `../../src/test/data/iliad_${encoding}.txt`));
-                        try {
-                            await readDataFromStream(stream, async reader => {
-                                let line: string | null;
-                                let lines = 0;
-                                let chars = 0;
-                                let longest = 0;
-                                while ((line = await reader.readLine({ encoding })) != null) {
-                                    lines++;
-                                    chars += line.length;
-                                    longest = Math.max(longest, line.length);
-                                }
-                                expect(lines).toBe(14408);
-                                expect(chars).toBe(686996);
-                                expect(longest).toBe(76);
-                            });
-                        } finally {
-                            await stream.close();
-                        }
-                    });
-                }
+                it(`can read Iliad`, async () => {
+                    const data = toByteArray(await readFile(`src/test/data/iliad_${encoding}.txt`, "base64"));
+                    const reader = new DataReader(new Uint8ArraySource(data));
+                    let line: string | null;
+                    let lines = 0;
+                    let chars = 0;
+                    let longest = 0;
+                    while ((line = await reader.readLine({ encoding })) != null) {
+                        lines++;
+                        chars += line.length;
+                        longest = Math.max(longest, line.length);
+                    }
+                    expect(lines).toBe(14408);
+                    expect(chars).toBe(686996);
+                    expect(longest).toBe(76);
+                });
             });
         }
         it("can limit the number of read bytes", async () => {
@@ -725,20 +719,11 @@ describe("DataReader", () => {
             expect(await reader.readLine({ encoding: "Shift-JIS" })).toBe("塵も積もれば山となる。");
             expect(await reader.readLine({ encoding: "Shift-JIS" })).toBeNull();
         });
-        if (typeof window === "undefined") {
-            it("can read UTF-16 line with specified maximum size", async () => {
-                const { FileInputStream } = await import("../main/streams/FileInputStream.js");
-                const { resolve } = await import("node:path");
-                const stream = new FileInputStream(resolve(__dirname, `../../src/test/data/iliad_utf-16le.txt`));
-                try {
-                    await readDataFromStream(stream, async reader => {
-                        expect(await reader.readLine({ maxBytes: 24, encoding: "utf-16le" })).toBe("The Project");
-                    });
-                } finally {
-                    await stream.close();
-                }
-            });
-        }
+        it("can read UTF-16 line with specified maximum size", async () => {
+            const data = toByteArray(await readFile(`src/test/data/iliad_utf-16le.txt`, "base64"));
+            const reader = new DataReader(new Uint8ArraySource(data));
+            expect(await reader.readLine({ maxBytes: 24, encoding: "utf-16le" })).toBe("The Project");
+        });
     });
 
     describe("skipBits", () => {
@@ -875,3 +860,35 @@ describe("DataReader", () => {
         }
     });
 });
+
+if (isNodeJS()) {
+    describe("readDataFromStream", () => {
+        for (const encoding of [ "utf-8", "utf-16le", "utf-16be" ]) {
+            describe(`with encoding ${encoding}`, () => {
+                it(`can read Iliad`, async () => {
+                    const { FileInputStream } = await import("../main/streams/FileInputStream.js");
+                    const { resolve } = await import("node:path");
+                    const stream = new FileInputStream(resolve(__dirname, `../../src/test/data/iliad_${encoding}.txt`));
+                    try {
+                        await readDataFromStream(stream, async reader => {
+                            let line: string | null;
+                            let lines = 0;
+                            let chars = 0;
+                            let longest = 0;
+                            while ((line = await reader.readLine({ encoding })) != null) {
+                                lines++;
+                                chars += line.length;
+                                longest = Math.max(longest, line.length);
+                            }
+                            expect(lines).toBe(14408);
+                            expect(chars).toBe(686996);
+                            expect(longest).toBe(76);
+                        });
+                    } finally {
+                        await stream.close();
+                    }
+                });
+            });
+        }
+    });
+}

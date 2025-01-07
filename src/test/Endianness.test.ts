@@ -1,9 +1,10 @@
+import { isNodeJS } from "@kayahr/vitest-matchers";
 import { describe, expect, it } from "vitest";
 
 import { Endianness, getNativeEndianness, swap16, swap32, swap64 } from "../main/Endianness.js";
 
 describe("Endianness", () => {
-    if (typeof window === "undefined") {
+    if (isNodeJS()) {
         describe("getNative", () => {
             it("returns the native endianness", async () => {
                 const { endianness } = await import("node:os");
