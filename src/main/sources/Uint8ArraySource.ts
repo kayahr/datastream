@@ -23,7 +23,7 @@ export class Uint8ArraySource implements DataReaderSource {
     public read(): ReadableStreamReadResult<Uint8Array> {
         const array = this.array;
         if (array == null) {
-            return { done: true };
+            return { done: true, value: undefined };
         } else {
             this.array = null;
             return { done: false, value: array };

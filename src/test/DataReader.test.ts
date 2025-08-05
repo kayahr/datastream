@@ -20,7 +20,7 @@ class MockDataReaderSource implements DataReaderSource {
     public read(): ReadableStreamReadResult<Uint8Array> {
         const chunk = this.data.splice(0, this.chunkSize);
         if (chunk.length === 0) {
-            return { done: true };
+            return { done: true, value: undefined };
         } else {
             return { done: false, value: new Uint8Array(chunk) };
         }
