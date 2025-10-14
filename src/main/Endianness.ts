@@ -2,15 +2,19 @@
  * Copyright (C) 2021 Klaus Reimer <k@ailis.de>
  * See LICENSE.md for licensing information
  */
+/**
+ * The enum type of endianness specifier.
+ */
+export type Endianness = typeof Endianness[keyof typeof Endianness];
 
 /** Enum for specifying endianness */
-export enum Endianness {
+export const Endianness = {
     /** Little Endian (Low byte before high byte) */
-    LITTLE,
+    LITTLE: 0,
 
     /** Big Endian (High byte before low byte) */
-    BIG
-}
+    BIG: 1
+} as const
 
 /** Cached native endianness */
 let nativeEndianness: Endianness | null = null;

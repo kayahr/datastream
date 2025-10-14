@@ -3,5 +3,5 @@
  * See LICENSE.md for licensing information
  */
 
-export * from "./streams/FileInputStream.js";
-export * from "./streams/FileOutputStream.js";
+export * from "./streams/FileInputStream.ts";
+export * from "./streams/FileOutputStream.ts";

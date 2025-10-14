@@ -1,9 +1,10 @@
 import { readFile, rm } from "node:fs/promises";
 
 import { tmpName } from "tmp-promise";
-import { describe, expect, it, type MockInstance, vi } from "vitest";
+import { describe, it } from "node:test";
 
-import { FileOutputStream } from "../../main/streams/FileOutputStream.js";
+import { FileOutputStream } from "../../main/streams/FileOutputStream.ts";
+import { assertSame } from "@kayahr/assert";
 
 describe("FileOutputStream", () => {
     it("can write bytes to given file", async () => {
@@ -21,21 +22,21 @@ describe("FileOutputStream", () => {
                 await stream.close();
             }
             const text = await readFile(tmpFile, { encoding: "utf-8" });
-            expect(text).toBe("Test text");
+            assertSame(text, "Test text");
         } finally {
             await rm(tmpFile);
         }
     });
 
-    it("is disposable", async () => {
-        let spy: MockInstance;
+    it("is disposable", async (t) => {
+        let spy: it.Mock<() => Promise<void>>;
         const tmpFile = await tmpName();
         try {
             await using stream = new FileOutputStream(tmpFile);
-            spy = vi.spyOn(stream, "close");
+            spy = t.mock.method(stream, "close");
         } finally {
             await rm(tmpFile);
         }
-        expect(spy).toHaveBeenCalledTimes(1);
+        assertSame(spy.mock.callCount(), 1);
     });
 });

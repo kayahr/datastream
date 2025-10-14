@@ -3,7 +3,7 @@
  * See LICENSE.md for licensing information
  */
 
-import { FileHandle, open } from "node:fs/promises";
+import { type FileHandle, open } from "node:fs/promises";
 
 /**
  * File output stream for Node.js.
@@ -31,7 +31,7 @@ export class FileOutputStream extends WritableStream<Uint8Array> implements Asyn
         });
     }
 
-    /** @inheritDoc */
+    /** @inheritdoc */
     public [Symbol.asyncDispose](): PromiseLike<void> {
         return this.close();
     }

@@ -3,7 +3,7 @@
  * See LICENSE.md for licensing information
  */
 
-import { DataReaderSource } from "../DataReaderSource.js";
+import type { DataReaderSource } from "../DataReaderSource.ts";
 
 /**
  * Source which reads from a Uint8Array.
@@ -19,7 +19,7 @@ export class Uint8ArraySource implements DataReaderSource {
         this.array = array;
     }
 
-    /** @inheritDoc */
+    /** @inheritdoc */
     public read(): ReadableStreamReadResult<Uint8Array> {
         const array = this.array;
         if (array == null) {

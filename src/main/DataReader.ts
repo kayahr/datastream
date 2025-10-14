@@ -3,9 +3,9 @@
  * See LICENSE.md for licensing information
  */
 
-import { DataReaderSource } from "./DataReaderSource.js";
-import { Endianness, getNativeEndianness, swap16, swap32, swap64 } from "./Endianness.js";
-import { Uint8ArraySink } from "./sinks/Uint8ArraySink.js";
+import type { DataReaderSource } from "./DataReaderSource.ts";
+import { Endianness, getNativeEndianness, swap16, swap32, swap64 } from "./Endianness.ts";
+import { Uint8ArraySink } from "./sinks/Uint8ArraySink.ts";
 
 /**
  * Options for constructing a data reader.
@@ -76,10 +76,10 @@ export class DataReader {
     private readonly endianness: Endianness;
     private readonly encoding: string;
     private bufferSize: number;
-    private bytesRead: number = 0;
-    private bitsRead: number = 0;
-    private byte: number = 0;
-    private bit: number = 0;
+    private bytesRead = 0;
+    private bitsRead = 0;
+    private byte = 0;
+    private bit = 0;
 
     /** Cached sink to read unknown amount of bytes. */
     private sink: WeakRef<Uint8ArraySink> | null = null;
@@ -874,16 +874,34 @@ export class DataReader {
             const size = result.getSize();
             if (utf16) {
                 if (bigEndian) {
-                    len = (result.at(size - 1) === 0x0a && result.at(size - 2) === 0x00)
-                        ? (result.at(size - 3) === 0x0d && result.at(size - 4) === 0x00)
-                        ? 4 : 2 : 0;
+                    if (result.at(size - 1) === 0x0a && result.at(size - 2) === 0x00) {
+                        if (result.at(size - 3) === 0x0d && result.at(size - 4) === 0x00) {
+                            len = 4;
+                        } else {
+                            len = 2;
+                        }
+                    } else {
+                        len = 0;
+                    }
                 } else {
-                    len = (result.at(size - 1) === 0x00 && result.at(size - 2) === 0x0a)
-                        ? (result.at(size - 3) === 0x00 && result.at(size - 4) === 0x0d)
-                        ? 4 : 2 : 0;
+                    if (result.at(size - 1) === 0x00 && result.at(size - 2) === 0x0a) {
+                        if (result.at(size - 3) === 0x00 && result.at(size - 4) === 0x0d) {
+                            len = 4;
+                        } else {
+                            len = 2;
+                        }
+                    } else {
+                        len = 0;
+                    }
+                }
+            } else if (result.at(size - 1) === 0x0a) {
+                if (result.at(size - 2) === 0x0d) {
+                    len = 2;
+                } else {
+                    len = 1;
                 }
             } else {
-                len = result.at(size - 1) === 0x0a ? result.at(size - 2) === 0x0d ? 2 : 1 : 0;
+                len = 0;
             }
             if (len > 0) {
                 result.rewind(len);

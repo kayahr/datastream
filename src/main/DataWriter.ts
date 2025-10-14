@@ -4,9 +4,8 @@
  */
 
 import { createTextEncoder } from "@kayahr/text-encoding/no-encodings";
-
-import { DataWriterSink } from "./DataWriterSink.js";
-import { Endianness, getNativeEndianness } from "./Endianness.js";
+import type { DataWriterSink } from "./DataWriterSink.ts";
+import { Endianness, getNativeEndianness } from "./Endianness.ts";
 
 /** The default buffer size (64KB). */
 const DEFAULT_BUFFER_SIZE = 65536;
@@ -40,9 +39,9 @@ export class DataWriter {
     private readonly bufferSize: number;
     private readonly endianness: Endianness;
     private readonly encoding: string;
-    private written: number = 0;
-    private byte: number = 0;
-    private bit: number = 0;
+    private written = 0;
+    private byte = 0;
+    private bit = 0;
     private writing = Promise.resolve();
 
     /**

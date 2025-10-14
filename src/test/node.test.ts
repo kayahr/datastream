@@ -1,12 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "node:test";
 
-import * as exports from "../main/node.js";
-import { FileInputStream } from "../main/streams/FileInputStream.js";
-import { FileOutputStream } from "../main/streams/FileOutputStream.js";
+import * as exports from "../main/node.ts";
+import { FileInputStream } from "../main/streams/FileInputStream.ts";
+import { FileOutputStream } from "../main/streams/FileOutputStream.ts";
+import { assertEquals } from "@kayahr/assert";
 
 describe("node", () => {
     it("exports relevant types and functions", () => {
-        expect({ ...exports }).toEqual({
+        assertEquals({ ...exports }, {
             FileInputStream,
             FileOutputStream
         });

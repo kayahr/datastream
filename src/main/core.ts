@@ -3,10 +3,10 @@
  * See LICENSE.md for licensing information
  */
 
-export * from "./DataReader.js";
-export * from "./DataReaderSource.js";
-export * from "./DataWriter.js";
-export * from "./DataWriterSink.js";
-export * from "./Endianness.js";
-export * from "./sinks/Uint8ArraySink.js";
-export * from "./sources/Uint8ArraySource.js";
+export * from "./DataReader.ts";
+export * from "./DataReaderSource.ts";
+export * from "./DataWriter.ts";
+export * from "./DataWriterSink.ts";
+export * from "./Endianness.ts";
+export * from "./sinks/Uint8ArraySink.ts";
+export * from "./sources/Uint8ArraySource.ts";

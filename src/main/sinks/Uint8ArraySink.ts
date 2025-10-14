@@ -3,7 +3,7 @@
  * See LICENSE.md for licensing information
  */
 
-import { DataWriterSink } from "../DataWriterSink.js";
+import type { DataWriterSink } from "../DataWriterSink.ts";
 
 /**
  * Sink which writes into a growing Uint8Array.
@@ -26,7 +26,7 @@ export class Uint8ArraySink implements DataWriterSink {
         this.buffer = new Uint8Array(capacity);
     }
 
-    /** @inheritDoc */
+    /** @inheritdoc */
     public write(chunk: Uint8Array | number): void {
         const isNumber = typeof chunk === "number";
         let capacity = this.capacity;

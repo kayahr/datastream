@@ -1,15 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "node:test";
 
-import * as exports from "../main/core.js";
-import { DataReader, readDataFromStream } from "../main/DataReader.js";
-import { DataWriter, writeDataToStream } from "../main/DataWriter.js";
-import { Endianness, getNativeEndianness, swap16, swap32, swap64 } from "../main/Endianness.js";
-import { Uint8ArraySink } from "../main/sinks/Uint8ArraySink.js";
-import { Uint8ArraySource } from "../main/sources/Uint8ArraySource.js";
+import * as exports from "../main/core.ts";
+import { DataReader, readDataFromStream } from "../main/DataReader.ts";
+import { DataWriter, writeDataToStream } from "../main/DataWriter.ts";
+import { Endianness, getNativeEndianness, swap16, swap32, swap64 } from "../main/Endianness.ts";
+import { Uint8ArraySink } from "../main/sinks/Uint8ArraySink.ts";
+import { Uint8ArraySource } from "../main/sources/Uint8ArraySource.ts";
+import { assertEquals } from "@kayahr/assert";
 
 describe("core", () => {
     it("exports relevant types and functions", () => {
-        expect({ ...exports }).toEqual({
+        assertEquals({ ...exports }, {
             DataReader,
             readDataFromStream,
             DataWriter,
