@@ -225,11 +225,11 @@ export class DataWriter {
      */
     public writeBigUint64(value: bigint, endianness: Endianness = this.endianness): void {
         if (endianness === Endianness.LITTLE) {
-            this.writeUint32(Number(value & BigInt(0xffffffff)), endianness);
-            this.writeUint32(Number(value >> BigInt(32)), endianness);
+            this.writeUint32(Number(value & 0xffffffffn), endianness);
+            this.writeUint32(Number(value >> 32n), endianness);
         } else {
-            this.writeUint32(Number(value >> BigInt(32)), endianness);
-            this.writeUint32(Number(value & BigInt(0xffffffff)), endianness);
+            this.writeUint32(Number(value >> 32n), endianness);
+            this.writeUint32(Number(value & 0xffffffffn), endianness);
         }
     }
 
