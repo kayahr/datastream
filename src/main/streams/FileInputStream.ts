@@ -10,7 +10,7 @@ import { type FileHandle, open } from "node:fs/promises";
  */
 export class FileInputStream extends ReadableStream<Uint8Array> implements AsyncDisposable {
     /** The open file handle. Null if not yet opened. */
-    private state: { file: FileHandle | null };
+    private readonly state: { file: FileHandle | null };
 
     /**
      * Creates a new file input stream reading to the given file.

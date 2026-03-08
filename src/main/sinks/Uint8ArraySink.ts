@@ -82,11 +82,7 @@ export class Uint8ArraySink implements DataWriterSink {
      * @returns the written bytes.
      */
     public getData(): Uint8Array {
-        if (this.size === this.capacity) {
-            return this.buffer;
-        } else {
-            return this.buffer.subarray(0, this.size);
-        }
+        return this.size === this.capacity ? this.buffer : this.buffer.subarray(0, this.size);
     }
 
     /**

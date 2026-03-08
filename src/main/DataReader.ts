@@ -406,11 +406,7 @@ export class DataReader {
         if (second == null) {
             return null;
         }
-        if (endianness === Endianness.LITTLE) {
-            return first | (second << 8);
-        } else {
-            return (first << 8) | second;
-        }
+        return endianness === Endianness.LITTLE ? first | (second << 8) : (first << 8) | second;
     }
 
     /**
@@ -453,11 +449,7 @@ export class DataReader {
         if (second == null) {
             return null;
         }
-        if (endianness === Endianness.LITTLE) {
-            return first | (second << 16);
-        } else {
-            return (first << 16) | second;
-        }
+        return endianness === Endianness.LITTLE ? first | (second << 16) : (first << 16) | second;
     }
 
     /**
@@ -474,11 +466,7 @@ export class DataReader {
         if (second == null) {
             return null;
         }
-        if (endianness === Endianness.LITTLE) {
-            return BigInt(first) | (BigInt(second) << 32n);
-        } else {
-            return BigInt(second) | (BigInt(first) << 32n);
-        }
+        return endianness === Endianness.LITTLE ? BigInt(first) | (BigInt(second) << 32n) : BigInt(second) | (BigInt(first) << 32n);
     }
 
     /**
@@ -681,11 +669,7 @@ export class DataReader {
      * @returns the text decoder for the given encoding.
      */
     private getTextDecoder(encoding: string): TextDecoder {
-        if (this.textDecoder?.encoding === encoding.toLowerCase()) {
-            return this.textDecoder;
-        } else {
-            return (this.textDecoder = new TextDecoder(encoding));
-        }
+        return this.textDecoder?.encoding === encoding.toLowerCase() ? this.textDecoder : this.textDecoder = new TextDecoder(encoding);
     }
 
     /**
@@ -856,15 +840,12 @@ export class DataReader {
      * @returns the read line. Null when end of stream is reached.
      */
     public async readLine({ includeEOL = false, initialCapacity, maxBytes, encoding = this.encoding }: ReadLineOptions = {}): Promise<string | null> {
-        let result: Uint8ArraySink | null;
         encoding = encoding.toLowerCase();
         const utf16 = encoding.startsWith("utf-16");
         const bigEndian = utf16 && encoding.endsWith("be");
-        if (utf16) {
-            result = await this.readUntil16(0x0a, bigEndian, initialCapacity, maxBytes, true);
-        } else {
-            result = await this.readUntil(0x0a, initialCapacity, maxBytes, true);
-        }
+        const result = utf16
+            ? await this.readUntil16(0x0a, bigEndian, initialCapacity, maxBytes, true)
+            : await this.readUntil(0x0a, initialCapacity, maxBytes, true);
         if (result == null) {
             // End of stream reached without reading any data
             return null;
@@ -875,31 +856,19 @@ export class DataReader {
             if (utf16) {
                 if (bigEndian) {
                     if (result.at(size - 1) === 0x0a && result.at(size - 2) === 0x00) {
-                        if (result.at(size - 3) === 0x0d && result.at(size - 4) === 0x00) {
-                            len = 4;
-                        } else {
-                            len = 2;
-                        }
+                        len = result.at(size - 3) === 0x0d && result.at(size - 4) === 0x00 ? 4 : 2;
                     } else {
                         len = 0;
                     }
                 } else {
                     if (result.at(size - 1) === 0x00 && result.at(size - 2) === 0x0a) {
-                        if (result.at(size - 3) === 0x00 && result.at(size - 4) === 0x0d) {
-                            len = 4;
-                        } else {
-                            len = 2;
-                        }
+                        len = result.at(size - 3) === 0x00 && result.at(size - 4) === 0x0d ? 4 : 2;
                     } else {
                         len = 0;
                     }
                 }
             } else if (result.at(size - 1) === 0x0a) {
-                if (result.at(size - 2) === 0x0d) {
-                    len = 2;
-                } else {
-                    len = 1;
-                }
+                len = result.at(size - 2) === 0x0d ? 2 : 1;
             } else {
                 len = 0;
             }
