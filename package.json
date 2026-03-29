@@ -27,7 +27,7 @@
     ],
     "exports": {
         ".": "./lib/main/core.js",
-        "./node": "./lib/node/node.js"
+        "./node": "./lib/main/node.js"
     },
     "scripts": {
         "clean": "rm -rf lib",
